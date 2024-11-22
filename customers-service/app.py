@@ -8,6 +8,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Talineslim0303$@localhost/customers_service'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+
 db.init_app(app)
 
 # Register a customer
@@ -29,7 +30,7 @@ def register_customer():
     )
     db.session.add(new_customer)
     db.session.commit()
-    return jsonify({"message": "Customer registered successfully!"}), 201
+    return jsonify({"message": "Customer registered successfully!", "id": new_customer.id}), 201
 
 
 # Update customer
@@ -130,5 +131,9 @@ def deduct_wallet(customer_id):
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # Ensure tables are created
+        try:
+            db.create_all()  # Ensure tables are created
+            print("Database tables created successfully.")
+        except Exception as e:
+            print(f"Error creating database tables: {e}")
     app.run(debug=True)
