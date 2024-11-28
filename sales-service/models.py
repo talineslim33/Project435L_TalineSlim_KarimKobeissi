@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-
+from datetime import datetime
 db = SQLAlchemy()
 
 # Good Model (imported from previous services)
@@ -37,3 +37,28 @@ class Sale(db.Model):
     # Relationships
     customer = db.relationship("Customer")
     good = db.relationship("Good")
+
+
+
+class Wishlist(db.Model):
+    __tablename__ = 'wishlist'
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=False)
+    good_id = db.Column(db.Integer, db.ForeignKey('good.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    customer = db.relationship('Customer', backref=db.backref('wishlist', lazy=True))
+    good = db.relationship('Good', backref=db.backref('wishlisted_by', lazy=True))
+
+# Notification Model
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    type = db.Column(db.String(50), nullable=False)  # E.g., 'expiry_warning'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default='unread')  # 'unread' or 'read'
+
+    # Relationships
+    customer = db.relationship('Customer', backref=db.backref('notifications', lazy=True))
