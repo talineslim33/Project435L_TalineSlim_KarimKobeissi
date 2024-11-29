@@ -18,9 +18,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import config
-
 from models import db, Customer  # Ensure 'Customer' model includes 'is_admin' field
-
 
 app = Flask(__name__)
 
@@ -171,8 +169,6 @@ def register_admin():
 
     return jsonify({"message": "Admin registered successfully!", "access_token": access_token}), 201
 
-
-# Login customer
 @app.route('/customers/login', methods=['POST'])
 @limiter.limit("5 per minute")
 def login_customer():
