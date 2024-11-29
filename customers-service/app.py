@@ -16,6 +16,7 @@ from flask_limiter.util import get_remote_address
 
 from models import db, Customer  # Ensure 'Customer' model includes 'is_admin' field
 
+
 app = Flask(__name__)
 
 # Security Configurations
