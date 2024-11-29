@@ -359,7 +359,6 @@ def charge_wallet(customer_id):
     db.session.commit()
     return jsonify({"message": f"${amount} added to wallet"}), 200
 
-
 # Deduct money from customer wallet (admin or the user themselves)
 @app.route('/customers/<int:customer_id>/wallet/deduct', methods=['POST'])
 @jwt_required()
