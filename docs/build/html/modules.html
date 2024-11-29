@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>customers-service &#8212; Project435L_TalineSlim_KarimKobeissi  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="app module" href="app.html" />
+    <link rel="prev" title="sales_service" href="sales_service.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="customers-service">
+<h1>customers-service<a class="headerlink" href="#customers-service" title="Link to this heading">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="app.html">app module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="app.html#app.SaleSchema"><code class="docutils literal notranslate"><span class="pre">SaleSchema</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="app.html#app.SaleSchema.username"><code class="docutils literal notranslate"><span class="pre">SaleSchema.username</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="app.html#app.SaleSchema.good_name"><code class="docutils literal notranslate"><span class="pre">SaleSchema.good_name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="app.html#app.SaleSchema.quantity"><code class="docutils literal notranslate"><span class="pre">SaleSchema.quantity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="app.html#app.SaleSchema.opts"><code class="docutils literal notranslate"><span class="pre">SaleSchema.opts</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="app.html#app.add_expiry_notification"><code class="docutils literal notranslate"><span class="pre">add_expiry_notification()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app.html#app.add_to_wishlist"><code class="docutils literal notranslate"><span class="pre">add_to_wishlist()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app.html#app.display_available_goods"><code class="docutils literal notranslate"><span class="pre">display_available_goods()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app.html#app.get_all_purchase_histories"><code class="docutils literal notranslate"><span class="pre">get_all_purchase_histories()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app.html#app.get_good_details"><code class="docutils literal notranslate"><span class="pre">get_good_details()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app.html#app.get_notifications"><code class="docutils literal notranslate"><span class="pre">get_notifications()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app.html#app.get_purchase_history"><code class="docutils literal notranslate"><span class="pre">get_purchase_history()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app.html#app.get_recommendations"><code class="docutils literal notranslate"><span class="pre">get_recommendations()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app.html#app.get_recommendations_for_customer"><code class="docutils literal notranslate"><span class="pre">get_recommendations_for_customer()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app.html#app.get_wishlist"><code class="docutils literal notranslate"><span class="pre">get_wishlist()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app.html#app.is_in_wishlist"><code class="docutils literal notranslate"><span class="pre">is_in_wishlist()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app.html#app.make_sale"><code class="docutils literal notranslate"><span class="pre">make_sale()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app.html#app.remove_from_wishlist"><code class="docutils literal notranslate"><span class="pre">remove_from_wishlist()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="app.html#app.sanitize_input"><code class="docutils literal notranslate"><span class="pre">sanitize_input()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">models module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="models.html#models.Customer"><code class="docutils literal notranslate"><span class="pre">Customer</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Customer.full_name"><code class="docutils literal notranslate"><span class="pre">Customer.full_name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Customer.id"><code class="docutils literal notranslate"><span class="pre">Customer.id</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Customer.query"><code class="docutils literal notranslate"><span class="pre">Customer.query</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Customer.username"><code class="docutils literal notranslate"><span class="pre">Customer.username</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Customer.wallet_balance"><code class="docutils literal notranslate"><span class="pre">Customer.wallet_balance</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#models.Good"><code class="docutils literal notranslate"><span class="pre">Good</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Good.category"><code class="docutils literal notranslate"><span class="pre">Good.category</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Good.description"><code class="docutils literal notranslate"><span class="pre">Good.description</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Good.id"><code class="docutils literal notranslate"><span class="pre">Good.id</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Good.inventory"><code class="docutils literal notranslate"><span class="pre">Good.inventory</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Good.name"><code class="docutils literal notranslate"><span class="pre">Good.name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Good.price_per_item"><code class="docutils literal notranslate"><span class="pre">Good.price_per_item</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Good.query"><code class="docutils literal notranslate"><span class="pre">Good.query</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#models.Inventory"><code class="docutils literal notranslate"><span class="pre">Inventory</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Inventory.good"><code class="docutils literal notranslate"><span class="pre">Inventory.good</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Inventory.good_id"><code class="docutils literal notranslate"><span class="pre">Inventory.good_id</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Inventory.id"><code class="docutils literal notranslate"><span class="pre">Inventory.id</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Inventory.query"><code class="docutils literal notranslate"><span class="pre">Inventory.query</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Inventory.stock_count"><code class="docutils literal notranslate"><span class="pre">Inventory.stock_count</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#models.Notification"><code class="docutils literal notranslate"><span class="pre">Notification</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Notification.created_at"><code class="docutils literal notranslate"><span class="pre">Notification.created_at</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Notification.customer"><code class="docutils literal notranslate"><span class="pre">Notification.customer</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Notification.customer_id"><code class="docutils literal notranslate"><span class="pre">Notification.customer_id</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Notification.id"><code class="docutils literal notranslate"><span class="pre">Notification.id</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Notification.message"><code class="docutils literal notranslate"><span class="pre">Notification.message</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Notification.query"><code class="docutils literal notranslate"><span class="pre">Notification.query</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Notification.status"><code class="docutils literal notranslate"><span class="pre">Notification.status</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Notification.type"><code class="docutils literal notranslate"><span class="pre">Notification.type</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#models.Sale"><code class="docutils literal notranslate"><span class="pre">Sale</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Sale.customer"><code class="docutils literal notranslate"><span class="pre">Sale.customer</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Sale.customer_id"><code class="docutils literal notranslate"><span class="pre">Sale.customer_id</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Sale.good"><code class="docutils literal notranslate"><span class="pre">Sale.good</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Sale.good_id"><code class="docutils literal notranslate"><span class="pre">Sale.good_id</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Sale.id"><code class="docutils literal notranslate"><span class="pre">Sale.id</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Sale.quantity"><code class="docutils literal notranslate"><span class="pre">Sale.quantity</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Sale.query"><code class="docutils literal notranslate"><span class="pre">Sale.query</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Sale.timestamp"><code class="docutils literal notranslate"><span class="pre">Sale.timestamp</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Sale.total_price"><code class="docutils literal notranslate"><span class="pre">Sale.total_price</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#models.Wishlist"><code class="docutils literal notranslate"><span class="pre">Wishlist</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Wishlist.created_at"><code class="docutils literal notranslate"><span class="pre">Wishlist.created_at</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Wishlist.customer"><code class="docutils literal notranslate"><span class="pre">Wishlist.customer</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Wishlist.customer_id"><code class="docutils literal notranslate"><span class="pre">Wishlist.customer_id</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Wishlist.good"><code class="docutils literal notranslate"><span class="pre">Wishlist.good</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Wishlist.good_id"><code class="docutils literal notranslate"><span class="pre">Wishlist.good_id</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Wishlist.id"><code class="docutils literal notranslate"><span class="pre">Wishlist.id</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#models.Wishlist.query"><code class="docutils literal notranslate"><span class="pre">Wishlist.query</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Project435L_TalineSlim_KarimKobeissi</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="customers_service.html">customers_service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inventory_service.html">inventory_service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="review_service.html">review_service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sales_service.html">sales_service</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">customers-service</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="app.html">app module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html">models module</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="sales_service.html" title="previous chapter">sales_service</a></li>
+      <li>Next: <a href="app.html" title="next chapter">app module</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Taline and Karim.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/modules.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>inventory_service &#8212; Project435L_TalineSlim_KarimKobeissi  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="review_service" href="review_service.html" />
+    <link rel="prev" title="customers_service" href="customers_service.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-inventory_service.app">
+<span id="inventory-service"></span><h1>inventory_service<a class="headerlink" href="#module-inventory_service.app" title="Link to this heading">¶</a></h1>
+<p>Inventory Management Service</p>
+<p>This Flask application provides a RESTful API for managing goods and their inventory. It
+supports creating, updating, retrieving, and deleting goods, along with adjusting inventory
+levels. The application uses JWT-based authentication with role-based access control for
+admin-only actions.</p>
+<p>Features:
+- Add new goods with inventory details (Admin only).
+- Update existing goods and inventory (Admin only).
+- Deduct inventory stock (Admin only).
+- Retrieve all goods with optional inventory details.
+- Retrieve specific goods by ID with inventory details.
+- Delete goods and their associated inventory (Admin only).</p>
+<p>Modules:
+- Flask: Core framework for the application.
+- Flask-JWT-Extended: For token-based authentication.
+- SQLAlchemy: ORM for database interactions.
+- Bleach: Input sanitization to prevent XSS attacks.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="inventory_service.app.add_good">
+<span class="sig-prename descclassname"><span class="pre">inventory_service.app.</span></span><span class="sig-name descname"><span class="pre">add_good</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/inventory_service/app.html#add_good"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#inventory_service.app.add_good" title="Link to this definition">¶</a></dt>
+<dd><p>Adds a new good with its inventory details.</p>
+<p>Admin-only endpoint.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>JSON response containing success message, good ID, and stock count,
+or an error message if unauthorized or invalid data.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>Response</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="inventory_service.app.deduct_stock">
+<span class="sig-prename descclassname"><span class="pre">inventory_service.app.</span></span><span class="sig-name descname"><span class="pre">deduct_stock</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">good_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/inventory_service/app.html#deduct_stock"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#inventory_service.app.deduct_stock" title="Link to this definition">¶</a></dt>
+<dd><p>Deducts stock from a good’s inventory.</p>
+<p>Admin-only endpoint.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>good_id</strong> (<em>int</em>) – ID of the good to deduct stock from.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>JSON response containing success message and remaining stock,
+or an error message if unauthorized, insufficient stock, or invalid data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Response</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="inventory_service.app.delete_good">
+<span class="sig-prename descclassname"><span class="pre">inventory_service.app.</span></span><span class="sig-name descname"><span class="pre">delete_good</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">good_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/inventory_service/app.html#delete_good"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#inventory_service.app.delete_good" title="Link to this definition">¶</a></dt>
+<dd><p>Deletes a good and its associated inventory.</p>
+<p>Admin-only endpoint.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>good_id</strong> (<em>int</em>) – ID of the good to delete.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>JSON response containing a success message or error message
+if not found or unauthorized.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Response</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="inventory_service.app.get_all_goods">
+<span class="sig-prename descclassname"><span class="pre">inventory_service.app.</span></span><span class="sig-name descname"><span class="pre">get_all_goods</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/inventory_service/app.html#get_all_goods"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#inventory_service.app.get_all_goods" title="Link to this definition">¶</a></dt>
+<dd><p>Retrieves all goods with optional inventory details.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>JSON response containing a list of goods and their details.
+Admin users see inventory details; regular users do not.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>Response</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="inventory_service.app.get_good">
+<span class="sig-prename descclassname"><span class="pre">inventory_service.app.</span></span><span class="sig-name descname"><span class="pre">get_good</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">good_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/inventory_service/app.html#get_good"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#inventory_service.app.get_good" title="Link to this definition">¶</a></dt>
+<dd><p>Retrieves details of a specific good.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>good_id</strong> (<em>int</em>) – ID of the good to retrieve.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>JSON response containing good details or an error message
+if not found.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Response</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="inventory_service.app.sanitize_input">
+<span class="sig-prename descclassname"><span class="pre">inventory_service.app.</span></span><span class="sig-name descname"><span class="pre">sanitize_input</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/inventory_service/app.html#sanitize_input"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#inventory_service.app.sanitize_input" title="Link to this definition">¶</a></dt>
+<dd><p>Sanitizes input to prevent XSS attacks.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>str</em><em> | </em><em>dict</em><em> | </em><em>list</em>) – Input data to sanitize.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Sanitized input in the same format as provided.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="inventory_service.app.update_good">
+<span class="sig-prename descclassname"><span class="pre">inventory_service.app.</span></span><span class="sig-name descname"><span class="pre">update_good</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">good_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/inventory_service/app.html#update_good"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#inventory_service.app.update_good" title="Link to this definition">¶</a></dt>
+<dd><p>Updates the details of a good and its inventory.</p>
+<p>Admin-only endpoint.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>good_id</strong> (<em>int</em>) – ID of the good to update.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>JSON response containing success message and updated good details,
+or an error message if unauthorized or invalid data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Response</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class" id="module-inventory_service.models">
+<dt class="sig sig-object py" id="inventory_service.models.Good">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">inventory_service.models.</span></span><span class="sig-name descname"><span class="pre">Good</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/inventory_service/models.html#Good"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#inventory_service.models.Good" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="inventory_service.models.Good.category">
+<span class="sig-name descname"><span class="pre">category</span></span><a class="headerlink" href="#inventory_service.models.Good.category" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="inventory_service.models.Good.description">
+<span class="sig-name descname"><span class="pre">description</span></span><a class="headerlink" href="#inventory_service.models.Good.description" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="inventory_service.models.Good.id">
+<span class="sig-name descname"><span class="pre">id</span></span><a class="headerlink" href="#inventory_service.models.Good.id" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="inventory_service.models.Good.inventory">
+<span class="sig-name descname"><span class="pre">inventory</span></span><a class="headerlink" href="#inventory_service.models.Good.inventory" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="inventory_service.models.Good.name">
+<span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#inventory_service.models.Good.name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="inventory_service.models.Good.price_per_item">
+<span class="sig-name descname"><span class="pre">price_per_item</span></span><a class="headerlink" href="#inventory_service.models.Good.price_per_item" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="inventory_service.models.Good.query">
+<span class="sig-name descname"><span class="pre">query</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">t.ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">Query</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#inventory_service.models.Good.query" title="Link to this definition">¶</a></dt>
+<dd><p>A SQLAlchemy query for a model. Equivalent to <code class="docutils literal notranslate"><span class="pre">db.session.query(Model)</span></code>. Can be
+customized per-model by overriding <code class="xref py py-attr docutils literal notranslate"><span class="pre">query_class</span></code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The query interface is considered legacy in SQLAlchemy. Prefer using
+<code class="docutils literal notranslate"><span class="pre">session.execute(select())</span></code> instead.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="inventory_service.models.Inventory">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">inventory_service.models.</span></span><span class="sig-name descname"><span class="pre">Inventory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/inventory_service/models.html#Inventory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#inventory_service.models.Inventory" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="inventory_service.models.Inventory.good">
+<span class="sig-name descname"><span class="pre">good</span></span><a class="headerlink" href="#inventory_service.models.Inventory.good" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="inventory_service.models.Inventory.good_id">
+<span class="sig-name descname"><span class="pre">good_id</span></span><a class="headerlink" href="#inventory_service.models.Inventory.good_id" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="inventory_service.models.Inventory.id">
+<span class="sig-name descname"><span class="pre">id</span></span><a class="headerlink" href="#inventory_service.models.Inventory.id" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="inventory_service.models.Inventory.query">
+<span class="sig-name descname"><span class="pre">query</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">t.ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">Query</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#inventory_service.models.Inventory.query" title="Link to this definition">¶</a></dt>
+<dd><p>A SQLAlchemy query for a model. Equivalent to <code class="docutils literal notranslate"><span class="pre">db.session.query(Model)</span></code>. Can be
+customized per-model by overriding <code class="xref py py-attr docutils literal notranslate"><span class="pre">query_class</span></code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The query interface is considered legacy in SQLAlchemy. Prefer using
+<code class="docutils literal notranslate"><span class="pre">session.execute(select())</span></code> instead.</p>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="inventory_service.models.Inventory.stock_count">
+<span class="sig-name descname"><span class="pre">stock_count</span></span><a class="headerlink" href="#inventory_service.models.Inventory.stock_count" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Project435L_TalineSlim_KarimKobeissi</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="customers_service.html">customers_service</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">inventory_service</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#inventory_service.app.add_good"><code class="docutils literal notranslate"><span class="pre">add_good()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inventory_service.app.deduct_stock"><code class="docutils literal notranslate"><span class="pre">deduct_stock()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inventory_service.app.delete_good"><code class="docutils literal notranslate"><span class="pre">delete_good()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inventory_service.app.get_all_goods"><code class="docutils literal notranslate"><span class="pre">get_all_goods()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inventory_service.app.get_good"><code class="docutils literal notranslate"><span class="pre">get_good()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inventory_service.app.sanitize_input"><code class="docutils literal notranslate"><span class="pre">sanitize_input()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inventory_service.app.update_good"><code class="docutils literal notranslate"><span class="pre">update_good()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inventory_service.models.Good"><code class="docutils literal notranslate"><span class="pre">Good</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inventory_service.models.Inventory"><code class="docutils literal notranslate"><span class="pre">Inventory</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="review_service.html">review_service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sales_service.html">sales_service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">customers-service</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="customers_service.html" title="previous chapter">customers_service</a></li>
+      <li>Next: <a href="review_service.html" title="next chapter">review_service</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Taline and Karim.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/inventory_service.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

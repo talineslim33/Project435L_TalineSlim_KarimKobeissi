@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>customers_service.app &#8212; Project435L_TalineSlim_KarimKobeissi  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for customers_service.app</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Customer Management Service</span>
+
+<span class="sd">This Flask application provides a RESTful API for managing customer data,</span>
+<span class="sd">including registration, login, profile management, and wallet transactions. It uses</span>
+<span class="sd">JWT-based authentication and role-based access control to differentiate between regular</span>
+<span class="sd">customers and admin users.</span>
+
+<span class="sd">Features:</span>
+<span class="sd">- Customer and admin registration.</span>
+<span class="sd">- JWT-based authentication for secure access.</span>
+<span class="sd">- Input validation using Marshmallow schemas.</span>
+<span class="sd">- Wallet management (charge and deduct).</span>
+<span class="sd">- Role-based authorization for admin-specific actions.</span>
+<span class="sd">- Pagination for fetching customer data.</span>
+
+<span class="sd">Modules:</span>
+<span class="sd">- Flask: Core framework for the application.</span>
+<span class="sd">- Flask-JWT-Extended: For token-based authentication.</span>
+<span class="sd">- SQLAlchemy: ORM for database interactions.</span>
+<span class="sd">- Marshmallow: Input validation and serialization.</span>
+<span class="sd">- Flask-Limiter: Rate-limiting for login attempts.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">secrets</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">decimal</span> <span class="kn">import</span> <span class="n">Decimal</span><span class="p">,</span> <span class="n">InvalidOperation</span>
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">jsonify</span>
+<span class="kn">from</span> <span class="nn">werkzeug.security</span> <span class="kn">import</span> <span class="n">generate_password_hash</span><span class="p">,</span> <span class="n">check_password_hash</span>
+<span class="kn">from</span> <span class="nn">flask_jwt_extended</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">JWTManager</span><span class="p">,</span> <span class="n">create_access_token</span><span class="p">,</span> <span class="n">jwt_required</span><span class="p">,</span> <span class="n">get_jwt_identity</span><span class="p">,</span> <span class="n">get_jwt</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">flask_sqlalchemy</span> <span class="kn">import</span> <span class="n">SQLAlchemy</span>
+<span class="kn">from</span> <span class="nn">marshmallow</span> <span class="kn">import</span> <span class="n">Schema</span><span class="p">,</span> <span class="n">fields</span><span class="p">,</span> <span class="n">ValidationError</span><span class="p">,</span> <span class="n">validates</span><span class="p">,</span> <span class="n">validate</span>
+<span class="kn">from</span> <span class="nn">flask_limiter</span> <span class="kn">import</span> <span class="n">Limiter</span>
+<span class="kn">from</span> <span class="nn">flask_limiter.util</span> <span class="kn">import</span> <span class="n">get_remote_address</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="c1"># Add the parent directory to sys.path</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;..&#39;</span><span class="p">)))</span>
+
+<span class="kn">import</span> <span class="nn">config</span>
+<span class="kn">from</span> <span class="nn">customers_service.models</span> <span class="kn">import</span> <span class="n">db</span><span class="p">,</span> <span class="n">Customer</span>  <span class="c1"># Ensure &#39;Customer&#39; model includes &#39;is_admin&#39; field</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;JWT_SECRET_KEY&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">JWT_SECRET_KEY</span>
+<span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;JWT_ALGORITHM&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">JWT_ALGORITHM</span>
+<span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;SQLALCHEMY_DATABASE_URI&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+    <span class="s1">&#39;DATABASE_URI&#39;</span><span class="p">,</span> <span class="s1">&#39;postgresql://postgres:Talineslim0303$@localhost/customers_service&#39;</span>
+<span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;SQLALCHEMY_TRACK_MODIFICATIONS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="c1"># Initialize Extensions</span>
+<span class="n">db</span><span class="o">.</span><span class="n">init_app</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+<span class="n">jwt</span> <span class="o">=</span> <span class="n">JWTManager</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+<span class="c1">#limiter = Limiter(key_func=get_remote_address)</span>
+<span class="c1">#limiter.init_app(app)</span>
+
+<span class="c1"># Uncomment if enforcing HTTPS in production</span>
+<span class="c1"># from flask_talisman import Talisman</span>
+<span class="c1"># if os.environ.get(&#39;FLASK_ENV&#39;) == &#39;production&#39;:</span>
+<span class="c1">#     Talisman(app, content_security_policy=None)</span>
+
+<div class="viewcode-block" id="validate_password">
+<a class="viewcode-back" href="../../customers_service.html#customers_service.app.validate_password">[docs]</a>
+<span class="k">def</span> <span class="nf">validate_password</span><span class="p">(</span><span class="n">password</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Validates the complexity of a password.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        password (str): The password to validate.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValidationError: If the password does not meet complexity requirements.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">password</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">8</span> <span class="ow">or</span>
+        <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[A-Z]&#39;</span><span class="p">,</span> <span class="n">password</span><span class="p">)</span> <span class="ow">or</span>
+        <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[a-z]&#39;</span><span class="p">,</span> <span class="n">password</span><span class="p">)</span> <span class="ow">or</span>
+        <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[0-9]&#39;</span><span class="p">,</span> <span class="n">password</span><span class="p">)</span> <span class="ow">or</span>
+        <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[\W_]&#39;</span><span class="p">,</span> <span class="n">password</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span>
+            <span class="s2">&quot;Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="validate_username">
+<a class="viewcode-back" href="../../customers_service.html#customers_service.app.validate_username">[docs]</a>
+<span class="k">def</span> <span class="nf">validate_username</span><span class="p">(</span><span class="n">username</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Validates the format of a username.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        username (str): The username to validate.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValidationError: If the username does not meet format requirements.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^\w{4,20}$&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span>
+            <span class="s2">&quot;Username must be 4-20 characters long and contain only letters, numbers, and underscores.&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CustomerSchema">
+<a class="viewcode-back" href="../../customers_service.html#customers_service.app.CustomerSchema">[docs]</a>
+<span class="k">class</span> <span class="nc">CustomerSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Schema for validating customer data.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        full_name (fields.Str): Customer&#39;s full name (max 100 characters).</span>
+<span class="sd">        username (fields.Str): Customer&#39;s username.</span>
+<span class="sd">        password (fields.Str): Customer&#39;s password (write-only).</span>
+<span class="sd">        age (fields.Int): Customer&#39;s age (must be between 0 and 150).</span>
+<span class="sd">        address (fields.Str): Customer&#39;s address (max 200 characters).</span>
+<span class="sd">        gender (fields.Str): Customer&#39;s gender (Male, Female, Other).</span>
+<span class="sd">        marital_status (fields.Str): Customer&#39;s marital status (Single, Married, Divorced, Widowed).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">full_name</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">Str</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="n">validate</span><span class="o">.</span><span class="n">Length</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">100</span><span class="p">))</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">Str</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="n">validate_username</span><span class="p">)</span>
+    <span class="n">password</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">Str</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">load_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="n">validate_password</span><span class="p">)</span>
+    <span class="n">age</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">Int</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mi">150</span><span class="p">)</span>
+    <span class="n">address</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">Str</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="n">validate</span><span class="o">.</span><span class="n">Length</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">200</span><span class="p">))</span>
+    <span class="n">gender</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">Str</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="n">validate</span><span class="o">.</span><span class="n">OneOf</span><span class="p">([</span><span class="s2">&quot;Male&quot;</span><span class="p">,</span> <span class="s2">&quot;Female&quot;</span><span class="p">,</span> <span class="s2">&quot;Other&quot;</span><span class="p">]))</span>
+    <span class="n">marital_status</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">Str</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="n">validate</span><span class="o">.</span><span class="n">OneOf</span><span class="p">([</span><span class="s2">&quot;Single&quot;</span><span class="p">,</span> <span class="s2">&quot;Married&quot;</span><span class="p">,</span> <span class="s2">&quot;Divorced&quot;</span><span class="p">,</span> <span class="s2">&quot;Widowed&quot;</span><span class="p">]))</span></div>
+
+
+<div class="viewcode-block" id="UpdateCustomerSchema">
+<a class="viewcode-back" href="../../customers_service.html#customers_service.app.UpdateCustomerSchema">[docs]</a>
+<span class="k">class</span> <span class="nc">UpdateCustomerSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Schema for updating customer data.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        username (fields.Str): Updated username (optional).</span>
+<span class="sd">        full_name (fields.Str): Updated full name (optional).</span>
+<span class="sd">        age (fields.Int): Updated age (optional).</span>
+<span class="sd">        address (fields.Str): Updated address (optional).</span>
+<span class="sd">        gender (fields.Str): Updated gender (optional).</span>
+<span class="sd">        marital_status (fields.Str): Updated marital status (optional).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">Str</span><span class="p">(</span><span class="n">validate</span><span class="o">=</span><span class="n">validate</span><span class="o">.</span><span class="n">Length</span><span class="p">(</span><span class="nb">min</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">20</span><span class="p">))</span>
+    <span class="n">full_name</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">Str</span><span class="p">(</span><span class="n">validate</span><span class="o">=</span><span class="n">validate</span><span class="o">.</span><span class="n">Length</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">100</span><span class="p">))</span>
+    <span class="n">age</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">Int</span><span class="p">(</span><span class="n">validate</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mi">150</span><span class="p">)</span>
+    <span class="n">address</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">Str</span><span class="p">(</span><span class="n">validate</span><span class="o">=</span><span class="n">validate</span><span class="o">.</span><span class="n">Length</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mi">200</span><span class="p">))</span>
+    <span class="n">gender</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">Str</span><span class="p">(</span><span class="n">validate</span><span class="o">=</span><span class="n">validate</span><span class="o">.</span><span class="n">OneOf</span><span class="p">([</span><span class="s2">&quot;Male&quot;</span><span class="p">,</span> <span class="s2">&quot;Female&quot;</span><span class="p">,</span> <span class="s2">&quot;Other&quot;</span><span class="p">]))</span>
+    <span class="n">marital_status</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">Str</span><span class="p">(</span><span class="n">validate</span><span class="o">=</span><span class="n">validate</span><span class="o">.</span><span class="n">OneOf</span><span class="p">([</span><span class="s2">&quot;Single&quot;</span><span class="p">,</span> <span class="s2">&quot;Married&quot;</span><span class="p">,</span> <span class="s2">&quot;Divorced&quot;</span><span class="p">,</span> <span class="s2">&quot;Widowed&quot;</span><span class="p">]))</span></div>
+
+
+<div class="viewcode-block" id="LoginSchema">
+<a class="viewcode-back" href="../../customers_service.html#customers_service.app.LoginSchema">[docs]</a>
+<span class="k">class</span> <span class="nc">LoginSchema</span><span class="p">(</span><span class="n">Schema</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Schema for validating login data.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        username (fields.Str): Username for login.</span>
+<span class="sd">        password (fields.Str): Password for login (write-only).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">Str</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="n">validate_username</span><span class="p">)</span>
+    <span class="n">password</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">Str</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">load_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+
+<span class="n">customer_schema</span> <span class="o">=</span> <span class="n">CustomerSchema</span><span class="p">()</span>
+<span class="n">update_customer_schema</span> <span class="o">=</span> <span class="n">UpdateCustomerSchema</span><span class="p">()</span>
+<span class="n">login_schema</span> <span class="o">=</span> <span class="n">LoginSchema</span><span class="p">()</span>
+
+<span class="c1"># Register a customer</span>
+<div class="viewcode-block" id="register_customer">
+<a class="viewcode-back" href="../../customers_service.html#customers_service.app.register_customer">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/customers/register&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">register_customer</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Registers a new customer.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Response: JSON response containing success message and access token, or error message.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">customer_schema</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">get_json</span><span class="p">())</span>
+    <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">messages</span><span class="p">),</span> <span class="mi">400</span>
+
+    <span class="c1"># Check if username is already taken</span>
+    <span class="k">if</span> <span class="n">Customer</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">first</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Username already taken&quot;</span><span class="p">}),</span> <span class="mi">400</span>
+
+    <span class="n">hashed_password</span> <span class="o">=</span> <span class="n">generate_password_hash</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;password&#39;</span><span class="p">])</span>
+    <span class="n">new_customer</span> <span class="o">=</span> <span class="n">Customer</span><span class="p">(</span>
+        <span class="n">full_name</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;full_name&#39;</span><span class="p">],</span>
+        <span class="n">username</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">],</span>
+        <span class="n">password_hash</span><span class="o">=</span><span class="n">hashed_password</span><span class="p">,</span>
+        <span class="n">age</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">],</span>
+        <span class="n">address</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">],</span>
+        <span class="n">gender</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;gender&#39;</span><span class="p">],</span>
+        <span class="n">marital_status</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;marital_status&#39;</span><span class="p">],</span>
+        <span class="n">is_admin</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_customer</span><span class="p">)</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="n">access_token</span> <span class="o">=</span> <span class="n">create_access_token</span><span class="p">(</span><span class="n">identity</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">new_customer</span><span class="o">.</span><span class="n">id</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Customer registered successfully!&quot;</span><span class="p">,</span> <span class="s2">&quot;access_token&quot;</span><span class="p">:</span> <span class="n">access_token</span><span class="p">}),</span> <span class="mi">201</span></div>
+
+
+
+<span class="c1"># register a new admin</span>
+<div class="viewcode-block" id="register_admin">
+<a class="viewcode-back" href="../../customers_service.html#customers_service.app.register_admin">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/admin/register&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">register_admin</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Registers a new admin user.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Response: JSON response containing success message and access token, or error message.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">customer_schema</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">get_json</span><span class="p">())</span>
+    <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">messages</span><span class="p">),</span> <span class="mi">400</span>
+
+    <span class="c1"># Check if username is already taken</span>
+    <span class="k">if</span> <span class="n">Customer</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">first</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Username already taken&quot;</span><span class="p">}),</span> <span class="mi">400</span>
+
+    <span class="n">hashed_password</span> <span class="o">=</span> <span class="n">generate_password_hash</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;password&#39;</span><span class="p">])</span>
+    <span class="n">new_admin</span> <span class="o">=</span> <span class="n">Customer</span><span class="p">(</span>
+        <span class="n">full_name</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;full_name&#39;</span><span class="p">],</span>
+        <span class="n">username</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">],</span>
+        <span class="n">password_hash</span><span class="o">=</span><span class="n">hashed_password</span><span class="p">,</span>
+        <span class="n">age</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">],</span>
+        <span class="n">address</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">],</span>
+        <span class="n">gender</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;gender&#39;</span><span class="p">],</span>
+        <span class="n">marital_status</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;marital_status&#39;</span><span class="p">],</span>
+        <span class="n">is_admin</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_admin</span><span class="p">)</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="n">access_token</span> <span class="o">=</span> <span class="n">create_access_token</span><span class="p">(</span><span class="n">identity</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">new_admin</span><span class="o">.</span><span class="n">id</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Admin registered successfully!&quot;</span><span class="p">,</span> <span class="s2">&quot;access_token&quot;</span><span class="p">:</span> <span class="n">access_token</span><span class="p">}),</span> <span class="mi">201</span></div>
+
+
+<span class="c1">#login customer</span>
+<div class="viewcode-block" id="login_customer">
+<a class="viewcode-back" href="../../customers_service.html#customers_service.app.login_customer">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/customers/login&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">login_customer</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Logs in a customer and generates a JWT token.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Response: JSON response containing access token and success message, or error message.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">login_schema</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">get_json</span><span class="p">())</span>
+    <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Invalid username or password&quot;</span><span class="p">}),</span> <span class="mi">401</span>
+
+    <span class="n">customer</span> <span class="o">=</span> <span class="n">Customer</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">customer</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">check_password_hash</span><span class="p">(</span><span class="n">customer</span><span class="o">.</span><span class="n">password_hash</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;password&#39;</span><span class="p">]):</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Invalid credentials&quot;</span><span class="p">}),</span> <span class="mi">401</span>
+
+    <span class="n">access_token</span> <span class="o">=</span> <span class="n">create_access_token</span><span class="p">(</span>
+        <span class="n">identity</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">customer</span><span class="o">.</span><span class="n">id</span><span class="p">),</span>
+        <span class="n">additional_claims</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="s2">&quot;is_admin&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">is_admin</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Login successful!&quot;</span><span class="p">,</span> <span class="s2">&quot;access_token&quot;</span><span class="p">:</span> <span class="n">access_token</span><span class="p">}),</span> <span class="mi">200</span></div>
+
+
+<span class="c1"># Endpoint to retrieve the logged-in customer&#39;s profile</span>
+<div class="viewcode-block" id="get_current_user">
+<a class="viewcode-back" href="../../customers_service.html#customers_service.app.get_current_user">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/customers/me&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">])</span>
+<span class="nd">@jwt_required</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">get_current_user</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Retrieves the currently logged-in customer&#39;s profile.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Response: JSON response containing customer data or error message.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">current_user_id</span> <span class="o">=</span> <span class="n">get_jwt_identity</span><span class="p">()</span>
+    <span class="n">customer</span> <span class="o">=</span> <span class="n">Customer</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">current_user_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">customer</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Customer not found&quot;</span><span class="p">}),</span> <span class="mi">404</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span>
+        <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+        <span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+        <span class="s2">&quot;full_name&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">full_name</span><span class="p">,</span>
+        <span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">age</span><span class="p">,</span>
+        <span class="s2">&quot;address&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+        <span class="s2">&quot;gender&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">gender</span><span class="p">,</span>
+        <span class="s2">&quot;marital_status&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">marital_status</span><span class="p">,</span>
+        <span class="s2">&quot;wallet_balance&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">customer</span><span class="o">.</span><span class="n">wallet_balance</span><span class="p">)</span>
+    <span class="p">}),</span> <span class="mi">200</span></div>
+
+
+<span class="c1"># Endpoint to retrieve all customers (admin-only)</span>
+<div class="viewcode-block" id="get_all_customers">
+<a class="viewcode-back" href="../../customers_service.html#customers_service.app.get_all_customers">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/customers&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">])</span>
+<span class="nd">@jwt_required</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">get_all_customers</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Retrieves a paginated list of all customers (admin only).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Response: JSON response containing paginated customer data or error message.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">claims</span> <span class="o">=</span> <span class="n">get_jwt</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">claims</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;is_admin&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Unauthorized action&quot;</span><span class="p">}),</span> <span class="mi">403</span>
+
+    <span class="n">page</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;page&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">per_page</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;per_page&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+
+    <span class="n">pagination</span> <span class="o">=</span> <span class="n">Customer</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">paginate</span><span class="p">(</span><span class="n">page</span><span class="o">=</span><span class="n">page</span><span class="p">,</span> <span class="n">per_page</span><span class="o">=</span><span class="n">per_page</span><span class="p">,</span> <span class="n">error_out</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">customers</span> <span class="o">=</span> <span class="n">pagination</span><span class="o">.</span><span class="n">items</span>
+
+    <span class="n">customers_data</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="s2">&quot;full_name&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">full_name</span><span class="p">,</span>
+            <span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">age</span><span class="p">,</span>
+            <span class="s2">&quot;address&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+            <span class="s2">&quot;gender&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">gender</span><span class="p">,</span>
+            <span class="s2">&quot;marital_status&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">marital_status</span><span class="p">,</span>
+            <span class="s2">&quot;wallet_balance&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">customer</span><span class="o">.</span><span class="n">wallet_balance</span><span class="p">)</span>
+        <span class="p">}</span> <span class="k">for</span> <span class="n">customer</span> <span class="ow">in</span> <span class="n">customers</span>
+    <span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span>
+        <span class="s2">&quot;total_customers&quot;</span><span class="p">:</span> <span class="n">pagination</span><span class="o">.</span><span class="n">total</span><span class="p">,</span>
+        <span class="s2">&quot;total_pages&quot;</span><span class="p">:</span> <span class="n">pagination</span><span class="o">.</span><span class="n">pages</span><span class="p">,</span>
+        <span class="s2">&quot;current_page&quot;</span><span class="p">:</span> <span class="n">pagination</span><span class="o">.</span><span class="n">page</span><span class="p">,</span>
+        <span class="s2">&quot;customers&quot;</span><span class="p">:</span> <span class="n">customers_data</span>
+    <span class="p">}),</span> <span class="mi">200</span></div>
+
+
+<span class="c1"># Endpoint to retrieve a customer by username (admin-only)</span>
+<div class="viewcode-block" id="get_customer_by_username">
+<a class="viewcode-back" href="../../customers_service.html#customers_service.app.get_customer_by_username">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/customers/username/&lt;string:username&gt;&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">])</span>
+<span class="nd">@jwt_required</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">get_customer_by_username</span><span class="p">(</span><span class="n">username</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Retrieves a customer&#39;s profile by username (admin only).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        username (str): The username of the customer to retrieve.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Response: JSON response containing customer data or error message.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">claims</span> <span class="o">=</span> <span class="n">get_jwt</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">claims</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;is_admin&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Unauthorized action&quot;</span><span class="p">}),</span> <span class="mi">403</span>
+
+    <span class="n">customer</span> <span class="o">=</span> <span class="n">Customer</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">customer</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Customer not found&quot;</span><span class="p">}),</span> <span class="mi">404</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span>
+        <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+        <span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+        <span class="s2">&quot;full_name&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">full_name</span><span class="p">,</span>
+        <span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">age</span><span class="p">,</span>
+        <span class="s2">&quot;address&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+        <span class="s2">&quot;gender&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">gender</span><span class="p">,</span>
+        <span class="s2">&quot;marital_status&quot;</span><span class="p">:</span> <span class="n">customer</span><span class="o">.</span><span class="n">marital_status</span><span class="p">,</span>
+        <span class="s2">&quot;wallet_balance&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">customer</span><span class="o">.</span><span class="n">wallet_balance</span><span class="p">)</span>
+    <span class="p">}),</span> <span class="mi">200</span></div>
+
+
+<span class="c1"># Update customer (admin or the user themselves)</span>
+<div class="viewcode-block" id="update_customer">
+<a class="viewcode-back" href="../../customers_service.html#customers_service.app.update_customer">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/customers/&lt;int:customer_id&gt;&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PUT&#39;</span><span class="p">])</span>
+<span class="nd">@jwt_required</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">update_customer</span><span class="p">(</span><span class="n">customer_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Updates a customer&#39;s profile (admin or the user themselves).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        customer_id (int): The ID of the customer to update.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Response: JSON response containing success message or error message.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">current_user_id</span> <span class="o">=</span> <span class="n">get_jwt_identity</span><span class="p">()</span>
+    <span class="n">claims</span> <span class="o">=</span> <span class="n">get_jwt</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">claims</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;is_admin&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">int</span><span class="p">(</span><span class="n">current_user_id</span><span class="p">)</span> <span class="o">!=</span> <span class="n">customer_id</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Unauthorized action&quot;</span><span class="p">}),</span> <span class="mi">403</span>
+
+    <span class="n">customer</span> <span class="o">=</span> <span class="n">Customer</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">customer_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">customer</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Customer not found&quot;</span><span class="p">}),</span> <span class="mi">404</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">update_customer_schema</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">get_json</span><span class="p">(),</span> <span class="n">partial</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">messages</span><span class="p">),</span> <span class="mi">400</span>
+
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">customer</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+    <span class="n">db</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Customer updated successfully&quot;</span><span class="p">}),</span> <span class="mi">200</span></div>
+
+
+<span class="c1"># Delete customer (admin or the user themselves)</span>
+<div class="viewcode-block" id="delete_customer">
+<a class="viewcode-back" href="../../customers_service.html#customers_service.app.delete_customer">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/customers/&lt;int:customer_id&gt;&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;DELETE&#39;</span><span class="p">])</span>
+<span class="nd">@jwt_required</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">delete_customer</span><span class="p">(</span><span class="n">customer_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Deletes a customer&#39;s profile (admin or the user themselves).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        customer_id (int): The ID of the customer to delete.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Response: JSON response containing success message or error message.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">current_user_id</span> <span class="o">=</span> <span class="n">get_jwt_identity</span><span class="p">()</span>
+    <span class="n">claims</span> <span class="o">=</span> <span class="n">get_jwt</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">claims</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;is_admin&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">int</span><span class="p">(</span><span class="n">current_user_id</span><span class="p">)</span> <span class="o">!=</span> <span class="n">customer_id</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Unauthorized action&quot;</span><span class="p">}),</span> <span class="mi">403</span>
+
+    <span class="n">customer</span> <span class="o">=</span> <span class="n">Customer</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">customer_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">customer</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Customer not found&quot;</span><span class="p">}),</span> <span class="mi">404</span>
+
+    <span class="n">db</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">customer</span><span class="p">)</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Customer deleted successfully&quot;</span><span class="p">}),</span> <span class="mi">200</span></div>
+
+
+<span class="c1"># Charge customer wallet (admin or the user themselves)</span>
+<div class="viewcode-block" id="charge_wallet">
+<a class="viewcode-back" href="../../customers_service.html#customers_service.app.charge_wallet">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/customers/&lt;int:customer_id&gt;/wallet/charge&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<span class="nd">@jwt_required</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">charge_wallet</span><span class="p">(</span><span class="n">customer_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Charges a customer&#39;s wallet (admin or the user themselves).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        customer_id (int): The ID of the customer to charge.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Response: JSON response containing success message or error message.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">current_user_id</span> <span class="o">=</span> <span class="n">get_jwt_identity</span><span class="p">()</span>
+    <span class="n">claims</span> <span class="o">=</span> <span class="n">get_jwt</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">claims</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;is_admin&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">int</span><span class="p">(</span><span class="n">current_user_id</span><span class="p">)</span> <span class="o">!=</span> <span class="n">customer_id</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Unauthorized action&quot;</span><span class="p">}),</span> <span class="mi">403</span>
+
+    <span class="n">customer</span> <span class="o">=</span> <span class="n">Customer</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">customer_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">customer</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Customer not found&quot;</span><span class="p">}),</span> <span class="mi">404</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">amount</span> <span class="o">=</span> <span class="n">Decimal</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;amount&#39;</span><span class="p">,</span> <span class="s1">&#39;0&#39;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">amount</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">InvalidOperation</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Invalid amount&quot;</span><span class="p">}),</span> <span class="mi">400</span>
+
+    <span class="n">customer</span><span class="o">.</span><span class="n">wallet_balance</span> <span class="o">=</span> <span class="n">Decimal</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">customer</span><span class="o">.</span><span class="n">wallet_balance</span><span class="p">))</span> <span class="o">+</span> <span class="n">amount</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;$</span><span class="si">{</span><span class="n">amount</span><span class="si">}</span><span class="s2"> added to wallet&quot;</span><span class="p">}),</span> <span class="mi">200</span></div>
+
+
+<span class="c1"># Deduct money from customer wallet (admin or the user themselves)</span>
+<div class="viewcode-block" id="deduct_wallet">
+<a class="viewcode-back" href="../../customers_service.html#customers_service.app.deduct_wallet">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/customers/&lt;int:customer_id&gt;/wallet/deduct&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<span class="nd">@jwt_required</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">deduct_wallet</span><span class="p">(</span><span class="n">customer_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Deducts money from a customer&#39;s wallet (admin or the user themselves).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        customer_id (int): The ID of the customer to deduct from.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Response: JSON response containing success message or error message.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">current_user_id</span> <span class="o">=</span> <span class="n">get_jwt_identity</span><span class="p">()</span>
+    <span class="n">claims</span> <span class="o">=</span> <span class="n">get_jwt</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">claims</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;is_admin&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">int</span><span class="p">(</span><span class="n">current_user_id</span><span class="p">)</span> <span class="o">!=</span> <span class="n">customer_id</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Unauthorized action&quot;</span><span class="p">}),</span> <span class="mi">403</span>
+
+    <span class="n">customer</span> <span class="o">=</span> <span class="n">Customer</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">customer_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">customer</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Customer not found&quot;</span><span class="p">}),</span> <span class="mi">404</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">amount</span> <span class="o">=</span> <span class="n">Decimal</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;amount&#39;</span><span class="p">,</span> <span class="s1">&#39;0&#39;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">amount</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">InvalidOperation</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Invalid amount&quot;</span><span class="p">}),</span> <span class="mi">400</span>
+
+    <span class="n">wallet_balance_decimal</span> <span class="o">=</span> <span class="n">Decimal</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">customer</span><span class="o">.</span><span class="n">wallet_balance</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">wallet_balance_decimal</span> <span class="o">&lt;</span> <span class="n">amount</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Insufficient funds&quot;</span><span class="p">}),</span> <span class="mi">400</span>
+
+    <span class="n">customer</span><span class="o">.</span><span class="n">wallet_balance</span> <span class="o">=</span> <span class="n">wallet_balance_decimal</span> <span class="o">-</span> <span class="n">amount</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;$</span><span class="si">{</span><span class="n">amount</span><span class="si">}</span><span class="s2"> deducted from wallet&quot;</span><span class="p">}),</span> <span class="mi">200</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Entry point for running the Flask application.</span>
+
+<span class="sd">    Starts the Flask server on the specified port.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">app</span><span class="o">.</span><span class="n">app_context</span><span class="p">():</span>
+        <span class="n">db</span><span class="o">.</span><span class="n">create_all</span><span class="p">()</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">5001</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Project435L_TalineSlim_KarimKobeissi</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../customers_service.html">customers_service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../inventory_service.html">inventory_service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../review_service.html">review_service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../sales_service.html">sales_service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">customers-service</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Taline and Karim.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
