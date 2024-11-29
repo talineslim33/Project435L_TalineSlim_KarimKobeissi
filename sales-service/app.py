@@ -1,3 +1,29 @@
+"""
+Sales and Wishlist Management Service
+
+This Flask application provides a RESTful API for managing sales, wishlists, notifications,
+and recommendations for an e-commerce platform. It supports user interactions such as
+purchasing goods, managing wishlists, receiving notifications, and viewing product recommendations.
+
+Features:
+- Display available goods with stock information (Admin view).
+- Retrieve detailed information about goods.
+- Purchase goods with wallet balance validation.
+- Manage wishlists (add, remove, view, and check items).
+- Get personalized product recommendations.
+- Notify users of goods about to expire in their wishlist.
+- View purchase history (customer-specific and admin-only).
+- Receive notifications for wishlist items.
+
+Modules:
+- Flask: Core framework for the application.
+- Flask-JWT-Extended: For token-based authentication.
+- SQLAlchemy: ORM for database interactions.
+- Marshmallow: Input validation and serialization.
+- Bleach: Input sanitization to prevent XSS attacks.
+
+"""
+
 from flask import Flask, request, jsonify
 from flask_jwt_extended import (
     JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
@@ -8,6 +34,7 @@ import bleach
 import sys
 import os
 from collections import Counter
+from datetime import datetime, timedelta
 
 # Add parent directory to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -25,16 +52,31 @@ app.config['JWT_ALGORITHM'] = config.JWT_ALGORITHM
 db.init_app(app)
 jwt = JWTManager(app)
 
-# Marshmallow Schemas for Validation
 class SaleSchema(Schema):
+    """
+    Schema for validating sales data.
+
+    Attributes:
+        username (fields.Str): Customer's username.
+        good_name (fields.Str): Name of the good being purchased.
+        quantity (fields.Int): Quantity of the good being purchased.
+    """
     username = fields.Str(required=True, validate=validate.Length(min=4, max=20))
     good_name = fields.Str(required=True, validate=validate.Length(min=1, max=100))
     quantity = fields.Int(required=False, validate=validate.Range(min=1))
 
 sale_schema = SaleSchema()
 
-# Helper function for sanitizing input
 def sanitize_input(data):
+    """
+    Sanitizes input to prevent XSS attacks.
+
+    Args:
+        data (str | dict | list): Input data to sanitize.
+
+    Returns:
+        Sanitized input in the same format as provided.
+    """
     if isinstance(data, str):
         return bleach.clean(data)
     elif isinstance(data, dict):
@@ -48,6 +90,12 @@ def sanitize_input(data):
 @app.route('/sales/goods', methods=['GET'])
 @jwt_required(optional=True)
 def display_available_goods():
+    """
+    Displays all goods with stock information.
+
+    Returns:
+        Response: JSON response with available goods. Admins see stock and price details.
+    """
     claims = get_jwt()
     is_admin = claims.get('is_admin', False) if claims else False
     goods = Good.query.join(Inventory).filter(Inventory.stock_count > 0).all()
@@ -60,6 +108,15 @@ def display_available_goods():
 @app.route('/sales/goods/<int:good_id>', methods=['GET'])
 @jwt_required(optional=True)
 def get_good_details(good_id):
+    """
+    Retrieves detailed information about a specific good.
+
+    Args:
+        good_id (int): ID of the good to retrieve.
+
+    Returns:
+        Response: JSON response with good details. Admins see full details, while users see limited details.
+    """
     claims = get_jwt()
     is_admin = claims.get('is_admin', False) if claims else False
 
@@ -84,18 +141,24 @@ def get_good_details(good_id):
 @app.route('/sales', methods=['POST'])
 @jwt_required()
 def make_sale():
+    """
+    Processes a sale for a customer.
+
+    Args:
+        None (data is provided in the request body).
+
+    Returns:
+        Response: JSON response with sale confirmation, updated wallet balance, and remaining stock.
+    """
     current_user_id = get_jwt_identity()
 
     try:
-        # Load and validate input data using Marshmallow
         data = sale_schema.load(request.get_json())
     except ValidationError as err:
         return jsonify(err.messages), 400
 
-    # Sanitize input
     data = sanitize_input(data)
 
-    # Get customer and good details
     customer = Customer.query.get(current_user_id)
     good = Good.query.filter_by(name=data['good_name']).first()
 
@@ -108,11 +171,9 @@ def make_sale():
     if customer.wallet_balance < total_price:
         return jsonify({"error": "Insufficient funds"}), 400
 
-    # Process the sale
     customer.wallet_balance -= total_price
     good.inventory.stock_count -= data['quantity']
 
-    # Record the sale
     sale = Sale(
         customer_id=customer.id,
         good_id=good.id,
@@ -132,6 +193,12 @@ def make_sale():
 @app.route('/sales/history', methods=['GET'])
 @jwt_required()
 def get_purchase_history():
+    """
+    Retrieves purchase history for the authenticated customer.
+
+    Returns:
+        Response: JSON response with a list of purchase history.
+    """
     current_user_id = get_jwt_identity()
     customer = Customer.query.get(current_user_id)
     if not customer:
@@ -152,6 +219,14 @@ def get_purchase_history():
 @app.route('/sales/history/all', methods=['GET'])
 @jwt_required()
 def get_all_purchase_histories():
+    """
+    Retrieves all purchase histories.
+
+    Admin-only endpoint.
+
+    Returns:
+        Response: JSON response with a list of all sales, including customer, product, and purchase details.
+    """
     claims = get_jwt()
     if not claims.get('is_admin', False):
         return jsonify({"error": "Unauthorized action"}), 403
@@ -168,33 +243,49 @@ def get_all_purchase_histories():
         for sale in sales
     ]), 200
 
+# Add an item to the wishlist
 @app.route('/wishlist', methods=['POST'])
 @jwt_required()
 def add_to_wishlist():
+    """
+    Adds an item to the customer's wishlist.
+
+    Args:
+        None (data is provided in the request body).
+
+    Returns:
+        Response: JSON response confirming addition or an error message if the item already exists.
+    """
     current_user_id = get_jwt_identity()
     data = request.get_json()
 
-    # Extract good_id from request data
     good_id = data.get('good_id')
 
-    # Validate that the good exists
     good = Good.query.get(good_id)
     if not good:
         return jsonify({"error": "Good not found"}), 404
 
-    # Check if already in wishlist
     if Wishlist.query.filter_by(customer_id=current_user_id, good_id=good_id).first():
         return jsonify({"message": "Item already in wishlist"}), 400
 
-    # Add to wishlist
     new_wishlist_item = Wishlist(customer_id=current_user_id, good_id=good_id)
     db.session.add(new_wishlist_item)
     db.session.commit()
     return jsonify({"message": "Item added to wishlist successfully"}), 201
 
+# Remove an item from the wishlist
 @app.route('/wishlist/<int:wishlist_id>', methods=['DELETE'])
 @jwt_required()
 def remove_from_wishlist(wishlist_id):
+    """
+    Removes an item from the customer's wishlist.
+
+    Args:
+        wishlist_id (int): ID of the wishlist item to remove.
+
+    Returns:
+        Response: JSON response confirming removal or an error message if the item is not found.
+    """
     current_user_id = get_jwt_identity()
 
     wishlist_item = Wishlist.query.filter_by(id=wishlist_id, customer_id=current_user_id).first()
@@ -206,13 +297,18 @@ def remove_from_wishlist(wishlist_id):
     db.session.commit()
     return jsonify({"message": "Item removed from wishlist"}), 200
 
-
+# Get all wishlist items
 @app.route('/wishlist', methods=['GET'])
 @jwt_required()
 def get_wishlist():
+    """
+    Retrieves all items in the customer's wishlist.
+
+    Returns:
+        Response: JSON response with a list of wishlist items, including product details.
+    """
     current_user_id = get_jwt_identity()
 
-    # Get all wishlist items for the customer
     wishlist_items = Wishlist.query.filter_by(customer_id=current_user_id).all()
     return jsonify([
         {
@@ -224,37 +320,67 @@ def get_wishlist():
         } for item in wishlist_items
     ]), 200
 
-
+# Check if an item is in the wishlist
 @app.route('/wishlist/<int:good_id>', methods=['GET'])
 @jwt_required()
 def is_in_wishlist(good_id):
+    """
+    Checks if a specific good is in the customer's wishlist.
+
+    Args:
+        good_id (int): ID of the good to check.
+
+    Returns:
+        Response: JSON response with `in_wishlist: True` if the item exists,
+        or `in_wishlist: False` if it does not.
+    """
     current_user_id = get_jwt_identity()
 
-    # Check if the good is in the wishlist
     wishlist_item = Wishlist.query.filter_by(customer_id=current_user_id, good_id=good_id).first()
     if wishlist_item:
         return jsonify({"in_wishlist": True}), 200
     else:
         return jsonify({"in_wishlist": False}), 404
 
+# Get product recommendations
+@app.route('/sales/recommendations', methods=['GET'])
+@jwt_required()
+def get_recommendations():
+    """
+    Provides personalized product recommendations for the customer.
+
+    Returns:
+        Response: JSON response with a list of recommended goods based on purchase patterns.
+    """
+    current_user_id = get_jwt_identity()
+    recommendations = get_recommendations_for_customer(current_user_id)
+
+    return jsonify(recommendations), 200
+
 def get_recommendations_for_customer(customer_id):
+    """
+    Generates product recommendations for a given customer.
+
+    Args:
+        customer_id (int): ID of the customer to generate recommendations for.
+
+    Returns:
+        list: A list of recommended goods with their details.
+    """
     customer_purchases = Sale.query.filter_by(customer_id=customer_id).all()
     purchased_goods_ids = {sale.good_id for sale in customer_purchases}
 
     similar_customers = Sale.query.filter(Sale.good_id.in_(purchased_goods_ids)).all()
     similar_customer_ids = {sale.customer_id for sale in similar_customers if sale.customer_id != customer_id}
 
-    # Get goods purchased by similar customers, excluding goods already purchased by the current customer
     recommendations = []
     for customer in similar_customer_ids:
         customer_sales = Sale.query.filter_by(customer_id=customer).all()
         recommendations.extend([sale.good_id for sale in customer_sales if sale.good_id not in purchased_goods_ids])
 
-    # Count the frequency of each recommended good and return the top recommended items
     recommended_good_ids = [good_id for good_id in recommendations]
-    most_common_goods = Counter(recommended_good_ids).most_common(5)  # Get top 5 recommendations
+    most_common_goods = Counter(recommended_good_ids).most_common(5)
 
-    # Fetch good details for recommendations
     recommended_goods = Good.query.filter(Good.id.in_([good[0] for good in most_common_goods])).all()
 
     return [
@@ -268,56 +394,26 @@ def get_recommendations_for_customer(customer_id):
         for good in recommended_goods
     ]
 
-@app.route('/sales/recommendations', methods=['GET'])
-@jwt_required()
-def get_recommendations():
-    # Get the current user's ID from JWT
-    current_user_id = get_jwt_identity()
-    
-    # Get recommendations for the user
-    recommendations = get_recommendations_for_customer(current_user_id)
-    
-    # Return the list of recommended goods
-    return jsonify(recommendations), 200
-
-def add_expiry_notification():
-    # Get goods that are about to expire in the next 3 days
-    soon_to_expire_goods = Good.query.filter(Good.expiry_date <= datetime.now() + timedelta(days=3)).all()
-
-    # Add notifications for all customers who have these goods in their cart or wish list
-    for good in soon_to_expire_goods:
-        customers = Customer.query.join(Wishlist).filter(Wishlist.good_id == good.id).all()
-
-        for customer in customers:
-            # Create a notification
-            notification = Notification(
-                customer_id=customer.id,
-                message=f"The item '{good.name}' in your wishlist will expire soon. Grab it before it's gone!",
-                type='expiry_warning',
-                good_id=good.id
-            )
-            db.session.add(notification)
-
-    # Commit to save notifications to the database
-    db.session.commit()
-    
-    
+# Notifications
 @app.route('/notifications', methods=['GET'])
 @jwt_required()
 def get_notifications():
+    """
+    Retrieves all notifications for the authenticated customer.
+
+    Returns:
+        Response: JSON response with a list of notifications, including type, message, and timestamps.
+    """
     current_user_id = get_jwt_identity()
 
-    # Fetch notifications for the current user
     notifications = Notification.query.filter_by(customer_id=current_user_id).order_by(Notification.created_at.desc()).all()
 
-    # Mark unread notifications as read
     for notification in notifications:
         if notification.status == 'unread':
             notification.status = 'read'
 
     db.session.commit()
 
-    # Return notifications as JSON
     return jsonify([
         {
             "message": notification.message,
@@ -328,8 +424,35 @@ def get_notifications():
         } for notification in notifications
     ]), 200
 
+# Add expiry notifications
+def add_expiry_notification():
+    """
+    Creates notifications for goods about to expire in the customer's wishlist.
+
+    This function is executed periodically to notify customers about expiring goods.
+    """
+    soon_to_expire_goods = Good.query.filter(Good.expiry_date <= datetime.now() + timedelta(days=3)).all()
+
+    for good in soon_to_expire_goods:
+        customers = Customer.query.join(Wishlist).filter(Wishlist.good_id == good.id).all()
+
+        for customer in customers:
+            notification = Notification(
+                customer_id=customer.id,
+                message=f"The item '{good.name}' in your wishlist will expire soon. Grab it before it's gone!",
+                type='expiry_warning',
+                good_id=good.id
+            )
+            db.session.add(notification)
+
+    db.session.commit()
 
 if __name__ == '__main__':
+    """
+    Entry point for running the Flask application.
+
+    Ensures the database tables are created before starting the server.
+    """
     with app.app_context():
-        db.create_all()  
+        db.create_all()
     app.run(debug=True)
