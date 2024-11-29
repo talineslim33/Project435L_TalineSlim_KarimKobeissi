@@ -1,8 +1,6 @@
-import os
 import secrets
 import re
 from decimal import Decimal, InvalidOperation
-
 from flask import Flask, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import (
@@ -13,18 +11,24 @@ from marshmallow import Schema, fields, ValidationError, validates, validate
 # from flask_talisman import Talisman  # Uncomment if used
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+import sys
+import os
+
+# Add the parent directory to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import config
 
 from models import db, Customer  # Ensure 'Customer' model includes 'is_admin' field
 
 app = Flask(__name__)
 
-# Security Configurations
-app.config['JWT_SECRET_KEY'] = 'shortkey123'  # Short key for testing ONLY
+app.config['JWT_SECRET_KEY'] = config.JWT_SECRET_KEY
+app.config['JWT_ALGORITHM'] = config.JWT_ALGORITHM
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URI', 'postgresql://postgres:Talineslim0303$@localhost/customers_service'
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_ALGORITHM'] = 'HS384'  # Shorter signature algorithm
 
 # Initialize Extensions
 db.init_app(app)
@@ -391,4 +395,4 @@ def deduct_wallet(customer_id):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(debug=False)  # Set debug to False in production
+    app.run(debug=False, port=5001)  # Set debug to False and change the port to 5001 (or any other port you prefer)
