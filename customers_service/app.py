@@ -22,7 +22,7 @@ Modules:
 - Flask-Limiter: Rate-limiting for login attempts.
 
 """
-
+from memory_profiler import profile
 import secrets
 import re
 from decimal import Decimal, InvalidOperation
@@ -37,7 +37,8 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import sys
 import os
-
+import cProfile
+import pstats
 # Add the parent directory to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -156,6 +157,7 @@ login_schema = LoginSchema()
 
 # Register a customer
 @app.route('/customers/register', methods=['POST'])
+@profile
 def register_customer():
     """
     Registers a new customer.
@@ -193,6 +195,7 @@ def register_customer():
 
 # register a new admin
 @app.route('/admin/register', methods=['POST'])
+@profile
 def register_admin():
     """
     Registers a new admin user.
@@ -229,6 +232,7 @@ def register_admin():
 
 #login customer
 @app.route('/customers/login', methods=['POST'])
+@profile
 def login_customer():
     """
     Logs in a customer and generates a JWT token.
@@ -258,6 +262,7 @@ def login_customer():
 # Endpoint to retrieve the logged-in customer's profile
 @app.route('/customers/me', methods=['GET'])
 @jwt_required()
+@profile
 def get_current_user():
     """
     Retrieves the currently logged-in customer's profile.
@@ -284,6 +289,7 @@ def get_current_user():
 # Endpoint to retrieve all customers (admin-only)
 @app.route('/customers', methods=['GET'])
 @jwt_required()
+@profile
 def get_all_customers():
     """
     Retrieves a paginated list of all customers (admin only).
@@ -324,6 +330,7 @@ def get_all_customers():
 # Endpoint to retrieve a customer by username (admin-only)
 @app.route('/customers/username/<string:username>', methods=['GET'])
 @jwt_required()
+@profile
 def get_customer_by_username(username):
     """
     Retrieves a customer's profile by username (admin only).
@@ -356,6 +363,7 @@ def get_customer_by_username(username):
 # Update customer (admin or the user themselves)
 @app.route('/customers/<int:customer_id>', methods=['PUT'])
 @jwt_required()
+@profile
 def update_customer(customer_id):
     """
     Updates a customer's profile (admin or the user themselves).
@@ -390,6 +398,7 @@ def update_customer(customer_id):
 # Delete customer (admin or the user themselves)
 @app.route('/customers/<int:customer_id>', methods=['DELETE'])
 @jwt_required()
+@profile
 def delete_customer(customer_id):
     """
     Deletes a customer's profile (admin or the user themselves).
@@ -417,6 +426,7 @@ def delete_customer(customer_id):
 # Charge customer wallet (admin or the user themselves)
 @app.route('/customers/<int:customer_id>/wallet/charge', methods=['POST'])
 @jwt_required()
+@profile
 def charge_wallet(customer_id):
     """
     Charges a customer's wallet (admin or the user themselves).
@@ -451,6 +461,7 @@ def charge_wallet(customer_id):
 # Deduct money from customer wallet (admin or the user themselves)
 @app.route('/customers/<int:customer_id>/wallet/deduct', methods=['POST'])
 @jwt_required()
+@profile
 def deduct_wallet(customer_id):
     """
     Deducts money from a customer's wallet (admin or the user themselves).
@@ -487,12 +498,19 @@ def deduct_wallet(customer_id):
     return jsonify({"message": f"${amount} deducted from wallet"}), 200
 
 
-if __name__ == '__main__':
-    """
-    Entry point for running the Flask application.
+import cProfile
+import pstats
 
-    Starts the Flask server on the specified port.
-    """
+if __name__ == '__main__':
+    # Create a profiler instance
+    profiler = cProfile.Profile()
+    profiler.enable()  # Start profiling
+
+    # Run the Flask app
     with app.app_context():
         db.create_all()
     app.run(debug=False, port=5001)
+
+    profiler.disable()  # Stop profiling
+    # Save profiling stats to a file
+    profiler.dump_stats('customers_service.prof')

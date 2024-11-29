@@ -1,0 +1,443 @@
+ * Serving Flask app 'memory_profiler'
+ * Debug mode: off
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   234     63.6 MiB     63.6 MiB           1   @app.route('/customers/login', methods=['POST'])
+   235                                         @profile
+   236                                         def login_customer():
+   237                                             """
+   238                                             Logs in a customer and generates a JWT token.
+   239                                         
+   240                                             Returns:
+   241                                                 Response: JSON response containing access token and success message, or error message.
+   242                                             """
+   243     63.6 MiB      0.0 MiB           1       try:
+   244     63.7 MiB      0.1 MiB           1           data = login_schema.load(request.get_json())
+   245                                             except ValidationError as err:
+   246                                                 return jsonify({"error": "Invalid username or password"}), 401
+   247                                         
+   248     64.0 MiB      0.3 MiB           1       customer = Customer.query.filter_by(username=data['username']).first()
+   249                                         
+   250     64.1 MiB      0.1 MiB           1       if not customer or not check_password_hash(customer.password_hash, data['password']):
+   251                                                 return jsonify({"error": "Invalid credentials"}), 401
+   252                                         
+   253     64.1 MiB      0.0 MiB           2       access_token = create_access_token(
+   254     64.1 MiB      0.0 MiB           1           identity=str(customer.id),
+   255     64.1 MiB      0.0 MiB           1           additional_claims={
+   256     64.1 MiB      0.0 MiB           1               "username": customer.username,
+   257     64.1 MiB      0.0 MiB           1               "is_admin": customer.is_admin
+   258                                                 }
+   259                                             )
+   260     64.1 MiB      0.0 MiB           1       return jsonify({"message": "Login successful!", "access_token": access_token}), 200
+
+
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   263     64.5 MiB     64.5 MiB           1   @app.route('/customers/me', methods=['GET'])
+   264                                         @jwt_required()
+   265                                         @profile
+   266                                         def get_current_user():
+   267                                             """
+   268                                             Retrieves the currently logged-in customer's profile.
+   269                                         
+   270                                             Returns:
+   271                                                 Response: JSON response containing customer data or error message.
+   272                                             """
+   273     64.5 MiB      0.0 MiB           1       current_user_id = get_jwt_identity()
+   274     64.5 MiB      0.1 MiB           1       customer = Customer.query.get(current_user_id)
+   275     64.5 MiB      0.0 MiB           1       if not customer:
+   276                                                 return jsonify({"error": "Customer not found"}), 404
+   277                                         
+   278     64.5 MiB      0.0 MiB           3       return jsonify({
+   279     64.5 MiB      0.0 MiB           1           "id": customer.id,
+   280     64.5 MiB      0.0 MiB           1           "username": customer.username,
+   281     64.5 MiB      0.0 MiB           1           "full_name": customer.full_name,
+   282     64.5 MiB      0.0 MiB           1           "age": customer.age,
+   283     64.5 MiB      0.0 MiB           1           "address": customer.address,
+   284     64.5 MiB      0.0 MiB           1           "gender": customer.gender,
+   285     64.5 MiB      0.0 MiB           1           "marital_status": customer.marital_status,
+   286     64.5 MiB      0.0 MiB           1           "wallet_balance": str(customer.wallet_balance)
+   287     64.5 MiB      0.0 MiB           1       }), 200
+
+
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   427     48.6 MiB     48.6 MiB           1   @app.route('/customers/<int:customer_id>/wallet/charge', methods=['POST'])
+   428                                         @jwt_required()
+   429                                         @profile
+   430                                         def charge_wallet(customer_id):
+   431                                             """
+   432                                             Charges a customer's wallet (admin or the user themselves).
+   433                                         
+   434                                             Args:
+   435                                                 customer_id (int): The ID of the customer to charge.
+   436                                         
+   437                                             Returns:
+   438                                                 Response: JSON response containing success message or error message.
+   439                                             """
+   440     48.6 MiB      0.0 MiB           1       current_user_id = get_jwt_identity()
+   441     48.6 MiB      0.0 MiB           1       claims = get_jwt()
+   442                                         
+   443     48.6 MiB      0.0 MiB           1       if not claims.get('is_admin', False) and int(current_user_id) != customer_id:
+   444                                                 return jsonify({"error": "Unauthorized action"}), 403
+   445                                         
+   446     49.3 MiB      0.6 MiB           1       customer = Customer.query.get(customer_id)
+   447     49.3 MiB      0.0 MiB           1       if not customer:
+   448                                                 return jsonify({"error": "Customer not found"}), 404
+   449                                         
+   450     49.3 MiB      0.0 MiB           1       try:
+   451     49.3 MiB      0.0 MiB           1           amount = Decimal(request.json.get('amount', '0'))
+   452     49.3 MiB      0.0 MiB           1           if amount <= 0:
+   453                                                     raise ValueError
+   454                                             except (InvalidOperation, ValueError):
+   455                                                 return jsonify({"error": "Invalid amount"}), 400
+   456                                         
+   457     49.3 MiB      0.0 MiB           1       customer.wallet_balance = Decimal(str(customer.wallet_balance)) + amount
+   458     50.0 MiB      0.6 MiB           1       db.session.commit()
+   459     50.0 MiB      0.0 MiB           1       return jsonify({"message": f"${amount} added to wallet"}), 200
+
+
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   159     17.2 MiB     17.2 MiB           1   @app.route('/customers/register', methods=['POST'])
+   160                                         @profile
+   161                                         def register_customer():
+   162                                             """
+   163                                             Registers a new customer.
+   164                                         
+   165                                             Returns:
+   166                                                 Response: JSON response containing success message and access token, or error message.
+   167                                             """
+   168     17.2 MiB      0.0 MiB           1       try:
+   169     18.6 MiB      1.4 MiB           1           data = customer_schema.load(request.get_json())
+   170                                             except ValidationError as err:
+   171                                                 return jsonify(err.messages), 400
+   172                                         
+   173                                             # Check if username is already taken
+   174     24.5 MiB      5.9 MiB           1       if Customer.query.filter_by(username=data['username']).first():
+   175     24.5 MiB      0.0 MiB           1           return jsonify({"error": "Username already taken"}), 400
+   176                                         
+   177                                             hashed_password = generate_password_hash(data['password'])
+   178                                             new_customer = Customer(
+   179                                                 full_name=data['full_name'],
+   180                                                 username=data['username'],
+   181                                                 password_hash=hashed_password,
+   182                                                 age=data['age'],
+   183                                                 address=data['address'],
+   184                                                 gender=data['gender'],
+   185                                                 marital_status=data['marital_status'],
+   186                                                 is_admin=False
+   187                                             )
+   188                                             db.session.add(new_customer)
+   189                                             db.session.commit()
+   190                                         
+   191                                             access_token = create_access_token(identity=str(new_customer.id))
+   192                                         
+   193                                             return jsonify({"message": "Customer registered successfully!", "access_token": access_token}), 201
+
+
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   159     24.8 MiB     24.8 MiB           1   @app.route('/customers/register', methods=['POST'])
+   160                                         @profile
+   161                                         def register_customer():
+   162                                             """
+   163                                             Registers a new customer.
+   164                                         
+   165                                             Returns:
+   166                                                 Response: JSON response containing success message and access token, or error message.
+   167                                             """
+   168     24.8 MiB      0.0 MiB           1       try:
+   169     24.8 MiB      0.0 MiB           1           data = customer_schema.load(request.get_json())
+   170                                             except ValidationError as err:
+   171                                                 return jsonify(err.messages), 400
+   172                                         
+   173                                             # Check if username is already taken
+   174     24.8 MiB      0.0 MiB           1       if Customer.query.filter_by(username=data['username']).first():
+   175                                                 return jsonify({"error": "Username already taken"}), 400
+   176                                         
+   177     25.2 MiB      0.4 MiB           1       hashed_password = generate_password_hash(data['password'])
+   178     25.4 MiB      0.2 MiB           2       new_customer = Customer(
+   179     25.2 MiB      0.0 MiB           1           full_name=data['full_name'],
+   180     25.2 MiB      0.0 MiB           1           username=data['username'],
+   181     25.2 MiB      0.0 MiB           1           password_hash=hashed_password,
+   182     25.2 MiB      0.0 MiB           1           age=data['age'],
+   183     25.2 MiB      0.0 MiB           1           address=data['address'],
+   184     25.2 MiB      0.0 MiB           1           gender=data['gender'],
+   185     25.2 MiB      0.0 MiB           1           marital_status=data['marital_status'],
+   186     25.2 MiB      0.0 MiB           1           is_admin=False
+   187                                             )
+   188     25.6 MiB      0.2 MiB           1       db.session.add(new_customer)
+   189     27.8 MiB      2.3 MiB           1       db.session.commit()
+   190                                         
+   191     28.8 MiB      1.0 MiB           1       access_token = create_access_token(identity=str(new_customer.id))
+   192                                         
+   193     28.8 MiB      0.0 MiB           1       return jsonify({"message": "Customer registered successfully!", "access_token": access_token}), 201
+
+
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   234     28.9 MiB     28.9 MiB           1   @app.route('/customers/login', methods=['POST'])
+   235                                         @profile
+   236                                         def login_customer():
+   237                                             """
+   238                                             Logs in a customer and generates a JWT token.
+   239                                         
+   240                                             Returns:
+   241                                                 Response: JSON response containing access token and success message, or error message.
+   242                                             """
+   243     28.9 MiB      0.0 MiB           1       try:
+   244     28.9 MiB      0.0 MiB           1           data = login_schema.load(request.get_json())
+   245                                             except ValidationError as err:
+   246                                                 return jsonify({"error": "Invalid username or password"}), 401
+   247                                         
+   248     28.9 MiB      0.0 MiB           1       customer = Customer.query.filter_by(username=data['username']).first()
+   249                                         
+   250     28.9 MiB      0.0 MiB           1       if not customer or not check_password_hash(customer.password_hash, data['password']):
+   251                                                 return jsonify({"error": "Invalid credentials"}), 401
+   252                                         
+   253     28.9 MiB      0.0 MiB           2       access_token = create_access_token(
+   254     28.9 MiB      0.0 MiB           1           identity=str(customer.id),
+   255     28.9 MiB      0.0 MiB           1           additional_claims={
+   256     28.9 MiB      0.0 MiB           1               "username": customer.username,
+   257     28.9 MiB      0.0 MiB           1               "is_admin": customer.is_admin
+   258                                                 }
+   259                                             )
+   260     28.9 MiB      0.0 MiB           1       return jsonify({"message": "Login successful!", "access_token": access_token}), 200
+
+
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   263     29.0 MiB     29.0 MiB           1   @app.route('/customers/me', methods=['GET'])
+   264                                         @jwt_required()
+   265                                         @profile
+   266                                         def get_current_user():
+   267                                             """
+   268                                             Retrieves the currently logged-in customer's profile.
+   269                                         
+   270                                             Returns:
+   271                                                 Response: JSON response containing customer data or error message.
+   272                                             """
+   273     29.0 MiB      0.0 MiB           1       current_user_id = get_jwt_identity()
+   274     29.2 MiB      0.2 MiB           1       customer = Customer.query.get(current_user_id)
+   275     29.2 MiB      0.0 MiB           1       if not customer:
+   276                                                 return jsonify({"error": "Customer not found"}), 404
+   277                                         
+   278     29.2 MiB      0.0 MiB           3       return jsonify({
+   279     29.2 MiB      0.0 MiB           1           "id": customer.id,
+   280     29.2 MiB      0.0 MiB           1           "username": customer.username,
+   281     29.2 MiB      0.0 MiB           1           "full_name": customer.full_name,
+   282     29.2 MiB      0.0 MiB           1           "age": customer.age,
+   283     29.2 MiB      0.0 MiB           1           "address": customer.address,
+   284     29.2 MiB      0.0 MiB           1           "gender": customer.gender,
+   285     29.2 MiB      0.0 MiB           1           "marital_status": customer.marital_status,
+   286     29.2 MiB      0.0 MiB           1           "wallet_balance": str(customer.wallet_balance)
+   287     29.2 MiB      0.0 MiB           1       }), 200
+
+
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   290     29.3 MiB     29.3 MiB           1   @app.route('/customers', methods=['GET'])
+   291                                         @jwt_required()
+   292                                         @profile
+   293                                         def get_all_customers():
+   294                                             """
+   295                                             Retrieves a paginated list of all customers (admin only).
+   296                                         
+   297                                             Returns:
+   298                                                 Response: JSON response containing paginated customer data or error message.
+   299                                             """
+   300     29.3 MiB      0.0 MiB           1       claims = get_jwt()
+   301     29.3 MiB      0.0 MiB           1       if not claims.get('is_admin', False):
+   302     29.3 MiB      0.0 MiB           1           return jsonify({"error": "Unauthorized action"}), 403
+   303                                         
+   304                                             page = request.args.get('page', 1, type=int)
+   305                                             per_page = request.args.get('per_page', 10, type=int)
+   306                                         
+   307                                             pagination = Customer.query.paginate(page=page, per_page=per_page, error_out=False)
+   308                                             customers = pagination.items
+   309                                         
+   310                                             customers_data = [
+   311                                                 {
+   312                                                     "id": customer.id,
+   313                                                     "username": customer.username,
+   314                                                     "full_name": customer.full_name,
+   315                                                     "age": customer.age,
+   316                                                     "address": customer.address,
+   317                                                     "gender": customer.gender,
+   318                                                     "marital_status": customer.marital_status,
+   319                                                     "wallet_balance": str(customer.wallet_balance)
+   320                                                 } for customer in customers
+   321                                             ]
+   322                                         
+   323                                             return jsonify({
+   324                                                 "total_customers": pagination.total,
+   325                                                 "total_pages": pagination.pages,
+   326                                                 "current_page": pagination.page,
+   327                                                 "customers": customers_data
+   328                                             }), 200
+
+
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   331     29.3 MiB     29.3 MiB           1   @app.route('/customers/username/<string:username>', methods=['GET'])
+   332                                         @jwt_required()
+   333                                         @profile
+   334                                         def get_customer_by_username(username):
+   335                                             """
+   336                                             Retrieves a customer's profile by username (admin only).
+   337                                         
+   338                                             Args:
+   339                                                 username (str): The username of the customer to retrieve.
+   340                                         
+   341                                             Returns:
+   342                                                 Response: JSON response containing customer data or error message.
+   343                                             """
+   344     29.3 MiB      0.0 MiB           1       claims = get_jwt()
+   345     29.3 MiB      0.0 MiB           1       if not claims.get('is_admin', False):
+   346     29.3 MiB      0.0 MiB           1           return jsonify({"error": "Unauthorized action"}), 403
+   347                                         
+   348                                             customer = Customer.query.filter_by(username=username).first()
+   349                                             if not customer:
+   350                                                 return jsonify({"error": "Customer not found"}), 404
+   351                                         
+   352                                             return jsonify({
+   353                                                 "id": customer.id,
+   354                                                 "username": customer.username,
+   355                                                 "full_name": customer.full_name,
+   356                                                 "age": customer.age,
+   357                                                 "address": customer.address,
+   358                                                 "gender": customer.gender,
+   359                                                 "marital_status": customer.marital_status,
+   360                                                 "wallet_balance": str(customer.wallet_balance)
+   361                                             }), 200
+
+
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   364     29.3 MiB     29.3 MiB           1   @app.route('/customers/<int:customer_id>', methods=['PUT'])
+   365                                         @jwt_required()
+   366                                         @profile
+   367                                         def update_customer(customer_id):
+   368                                             """
+   369                                             Updates a customer's profile (admin or the user themselves).
+   370                                         
+   371                                             Args:
+   372                                                 customer_id (int): The ID of the customer to update.
+   373                                         
+   374                                             Returns:
+   375                                                 Response: JSON response containing success message or error message.
+   376                                             """
+   377     29.3 MiB      0.0 MiB           1       current_user_id = get_jwt_identity()
+   378     29.3 MiB      0.0 MiB           1       claims = get_jwt()
+   379                                         
+   380     29.3 MiB      0.0 MiB           1       if not claims.get('is_admin', False) and int(current_user_id) != customer_id:
+   381                                                 return jsonify({"error": "Unauthorized action"}), 403
+   382                                         
+   383     29.4 MiB      0.1 MiB           1       customer = Customer.query.get(customer_id)
+   384     29.4 MiB      0.0 MiB           1       if not customer:
+   385                                                 return jsonify({"error": "Customer not found"}), 404
+   386                                         
+   387     29.4 MiB      0.0 MiB           1       try:
+   388     29.5 MiB      0.0 MiB           1           data = update_customer_schema.load(request.get_json(), partial=True)
+   389                                             except ValidationError as err:
+   390                                                 return jsonify(err.messages), 400
+   391                                         
+   392     29.5 MiB      0.0 MiB           3       for key, value in data.items():
+   393     29.5 MiB      0.0 MiB           2           setattr(customer, key, value)
+   394                                         
+   395     29.6 MiB      0.1 MiB           1       db.session.commit()
+   396     29.6 MiB      0.0 MiB           1       return jsonify({"message": "Customer updated successfully"}), 200
+
+
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   399     29.6 MiB     29.6 MiB           1   @app.route('/customers/<int:customer_id>', methods=['DELETE'])
+   400                                         @jwt_required()
+   401                                         @profile
+   402                                         def delete_customer(customer_id):
+   403                                             """
+   404                                             Deletes a customer's profile (admin or the user themselves).
+   405                                         
+   406                                             Args:
+   407                                                 customer_id (int): The ID of the customer to delete.
+   408                                         
+   409                                             Returns:
+   410                                                 Response: JSON response containing success message or error message.
+   411                                             """
+   412     29.6 MiB      0.0 MiB           1       current_user_id = get_jwt_identity()
+   413     29.6 MiB      0.0 MiB           1       claims = get_jwt()
+   414                                         
+   415     29.6 MiB      0.0 MiB           1       if not claims.get('is_admin', False) and int(current_user_id) != customer_id:
+   416                                                 return jsonify({"error": "Unauthorized action"}), 403
+   417                                         
+   418     29.6 MiB      0.0 MiB           1       customer = Customer.query.get(customer_id)
+   419     29.6 MiB      0.0 MiB           1       if not customer:
+   420                                                 return jsonify({"error": "Customer not found"}), 404
+   421                                         
+   422     29.6 MiB      0.0 MiB           1       db.session.delete(customer)
+   423     29.8 MiB      0.1 MiB           1       db.session.commit()
+   424     29.8 MiB      0.0 MiB           1       return jsonify({"message": "Customer deleted successfully"}), 200
+
+
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   427     29.8 MiB     29.8 MiB           1   @app.route('/customers/<int:customer_id>/wallet/charge', methods=['POST'])
+   428                                         @jwt_required()
+   429                                         @profile
+   430                                         def charge_wallet(customer_id):
+   431                                             """
+   432                                             Charges a customer's wallet (admin or the user themselves).
+   433                                         
+   434                                             Args:
+   435                                                 customer_id (int): The ID of the customer to charge.
+   436                                         
+   437                                             Returns:
+   438                                                 Response: JSON response containing success message or error message.
+   439                                             """
+   440     29.8 MiB      0.0 MiB           1       current_user_id = get_jwt_identity()
+   441     29.8 MiB      0.0 MiB           1       claims = get_jwt()
+   442                                         
+   443     29.8 MiB      0.0 MiB           1       if not claims.get('is_admin', False) and int(current_user_id) != customer_id:
+   444     29.8 MiB      0.0 MiB           1           return jsonify({"error": "Unauthorized action"}), 403
+   445                                         
+   446                                             customer = Customer.query.get(customer_id)
+   447                                             if not customer:
+   448                                                 return jsonify({"error": "Customer not found"}), 404
+   449                                         
+   450                                             try:
+   451                                                 amount = Decimal(request.json.get('amount', '0'))
+   452                                                 if amount <= 0:
+   453                                                     raise ValueError
+   454                                             except (InvalidOperation, ValueError):
+   455                                                 return jsonify({"error": "Invalid amount"}), 400
+   456                                         
+   457                                             customer.wallet_balance = Decimal(str(customer.wallet_balance)) + amount
+   458                                             db.session.commit()
+   459                                             return jsonify({"message": f"${amount} added to wallet"}), 200
+
+

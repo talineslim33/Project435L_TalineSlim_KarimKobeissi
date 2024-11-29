@@ -1,0 +1,91 @@
+Timer unit: 1e-07 s
+
+Total time: 0.0005861 s
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\customers_service\app.py
+Function: register_customer at line 159
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   159                                           @app.route('/customers/register', methods=['POST'])
+   160                                           @profile
+   161                                           def register_customer():
+   162                                               """
+   163                                               Registers a new customer.
+   164                                           
+   165                                               Returns:
+   166                                                   Response: JSON response containing success message and access token, or error message.
+   167                                               """
+   168         1          6.0      6.0      0.1      try:
+   169         1       5832.0   5832.0     99.5          data = customer_schema.load(request.get_json())
+   170         1         23.0     23.0      0.4      except ValidationError as err:
+   171                                                   return jsonify(err.messages), 400
+   172                                           
+   173                                               # Check if username is already taken
+   174                                               if Customer.query.filter_by(username=data['username']).first():
+   175                                                   return jsonify({"error": "Username already taken"}), 400
+   176                                           
+   177                                               hashed_password = generate_password_hash(data['password'])
+   178                                               new_customer = Customer(
+   179                                                   full_name=data['full_name'],
+   180                                                   username=data['username'],
+   181                                                   password_hash=hashed_password,
+   182                                                   age=data['age'],
+   183                                                   address=data['address'],
+   184                                                   gender=data['gender'],
+   185                                                   marital_status=data['marital_status'],
+   186                                                   is_admin=False
+   187                                               )
+   188                                               db.session.add(new_customer)
+   189                                               db.session.commit()
+   190                                           
+   191                                               access_token = create_access_token(identity=str(new_customer.id))
+   192                                           
+   193                                               return jsonify({"message": "Customer registered successfully!", "access_token": access_token}), 201
+
+Total time: 0 s
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\customers_service\app.py
+Function: login_customer at line 234
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   234                                           @app.route('/customers/login', methods=['POST'])
+   235                                           @profile
+   236                                           def login_customer():
+   237                                               """
+   238                                               Logs in a customer and generates a JWT token.
+   239                                           
+   240                                               Returns:
+   241                                                   Response: JSON response containing access token and success message, or error message.
+   242                                               """
+   243                                               try:
+   244                                                   data = login_schema.load(request.get_json())
+   245                                               except ValidationError as err:
+   246                                                   return jsonify({"error": "Invalid username or password"}), 401
+   247                                           
+   248                                               customer = Customer.query.filter_by(username=data['username']).first()
+   249                                           
+   250                                               if not customer or not check_password_hash(customer.password_hash, data['password']):
+   251                                                   return jsonify({"error": "Invalid credentials"}), 401
+   252                                           
+   253                                               access_token = create_access_token(
+   254                                                   identity=str(customer.id),
+   255                                                   additional_claims={
+   256                                                       "username": customer.username,
+   257                                                       "is_admin": customer.is_admin
+   258                                                   }
+   259                                               )
+   260                                               return jsonify({"message": "Login successful!", "access_token": access_token}), 200
+
+Total time: 0 s
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\venv\Lib\site-packages\memory_profiler.py
+Function: wrapper at line 1185
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+  1185                                                       @wraps(wrapped=func)
+  1186                                                       def wrapper(*args, **kwargs):
+  1187                                                           prof = get_prof()
+  1188                                                           val = prof(func)(*args, **kwargs)
+  1189                                                           show_results_bound(prof)
+  1190                                                           return val
+
