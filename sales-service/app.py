@@ -7,6 +7,7 @@ from models import db, Good, Inventory, Customer, Sale, Wishlist, Notification
 import bleach
 import sys
 import os
+from collections import Counter
 
 # Add parent directory to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -235,9 +236,6 @@ def is_in_wishlist(good_id):
         return jsonify({"in_wishlist": True}), 200
     else:
         return jsonify({"in_wishlist": False}), 404
-
-
-from collections import Counter
 
 def get_recommendations_for_customer(customer_id):
     customer_purchases = Sale.query.filter_by(customer_id=customer_id).all()
