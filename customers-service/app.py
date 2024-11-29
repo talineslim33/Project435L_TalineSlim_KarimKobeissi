@@ -172,7 +172,6 @@ def register_admin():
     return jsonify({"message": "Admin registered successfully!", "access_token": access_token}), 201
 
 
-
 # Login customer
 @app.route('/customers/login', methods=['POST'])
 @limiter.limit("5 per minute")
