@@ -1,3 +1,27 @@
+"""
+Inventory Management Service
+
+This Flask application provides a RESTful API for managing goods and their inventory. It
+supports creating, updating, retrieving, and deleting goods, along with adjusting inventory
+levels. The application uses JWT-based authentication with role-based access control for
+admin-only actions.
+
+Features:
+- Add new goods with inventory details (Admin only).
+- Update existing goods and inventory (Admin only).
+- Deduct inventory stock (Admin only).
+- Retrieve all goods with optional inventory details.
+- Retrieve specific goods by ID with inventory details.
+- Delete goods and their associated inventory (Admin only).
+
+Modules:
+- Flask: Core framework for the application.
+- Flask-JWT-Extended: For token-based authentication.
+- SQLAlchemy: ORM for database interactions.
+- Bleach: Input sanitization to prevent XSS attacks.
+
+"""
+
 from flask import Flask, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
@@ -24,9 +48,16 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 jwt = JWTManager(app)
 
-
-# Helper function for sanitizing input
 def sanitize_input(data):
+    """
+    Sanitizes input to prevent XSS attacks.
+
+    Args:
+        data (str | dict | list): Input data to sanitize.
+
+    Returns:
+        Sanitized input in the same format as provided.
+    """
     if isinstance(data, str):
         return bleach.clean(data)
     elif isinstance(data, dict):
@@ -40,27 +71,32 @@ def sanitize_input(data):
 @app.route('/goods', methods=['POST'])
 @jwt_required()
 def add_good():
+    """
+    Adds a new good with its inventory details.
+
+    Admin-only endpoint.
+
+    Returns:
+        Response: JSON response containing success message, good ID, and stock count,
+        or an error message if unauthorized or invalid data.
+    """
     claims = get_jwt()
     if not claims.get('is_admin', False):
         return jsonify({"error": "Unauthorized action"}), 403
 
-    data = request.get_json()
+    data = sanitize_input(request.get_json())
 
-    # Sanitize input
-    data = sanitize_input(data)
-
-    # Create a new good
     new_good = Good(
         name=data['name'],
         category=data['category'],
         price_per_item=data['price_per_item'],
         description=data.get('description', '')
     )
-    # Create inventory for the good
     new_inventory = Inventory(stock_count=data['stock_count'], good=new_good)
     db.session.add(new_good)
     db.session.add(new_inventory)
     db.session.commit()
+
     return jsonify({
         "message": "Good and inventory added successfully!",
         "good_id": new_good.id,
@@ -71,6 +107,18 @@ def add_good():
 @app.route('/goods/<int:good_id>/inventory/deduct', methods=['POST'])
 @jwt_required()
 def deduct_stock(good_id):
+    """
+    Deducts stock from a good's inventory.
+
+    Admin-only endpoint.
+
+    Args:
+        good_id (int): ID of the good to deduct stock from.
+
+    Returns:
+        Response: JSON response containing success message and remaining stock,
+        or an error message if unauthorized, insufficient stock, or invalid data.
+    """
     claims = get_jwt()
     if not claims.get('is_admin', False):
         return jsonify({"error": "Unauthorized action"}), 403
@@ -79,11 +127,7 @@ def deduct_stock(good_id):
     if not good or not good.inventory:
         return jsonify({"error": "Good or inventory not found"}), 404
 
-    data = request.get_json()
-
-    # Sanitize input
-    data = sanitize_input(data)
-
+    data = sanitize_input(request.get_json())
     quantity_to_deduct = data.get('quantity', 1)
 
     if good.inventory.stock_count < quantity_to_deduct:
@@ -91,6 +135,7 @@ def deduct_stock(good_id):
 
     good.inventory.stock_count -= quantity_to_deduct
     db.session.commit()
+
     return jsonify({
         "message": f"{quantity_to_deduct} items deducted from stock",
         "remaining_stock": good.inventory.stock_count
@@ -100,6 +145,18 @@ def deduct_stock(good_id):
 @app.route('/goods/<int:good_id>', methods=['PUT'])
 @jwt_required()
 def update_good(good_id):
+    """
+    Updates the details of a good and its inventory.
+
+    Admin-only endpoint.
+
+    Args:
+        good_id (int): ID of the good to update.
+
+    Returns:
+        Response: JSON response containing success message and updated good details,
+        or an error message if unauthorized or invalid data.
+    """
     claims = get_jwt()
     if not claims.get('is_admin', False):
         return jsonify({"error": "Unauthorized action"}), 403
@@ -108,26 +165,21 @@ def update_good(good_id):
     if not good:
         return jsonify({"error": "Good not found"}), 404
 
-    data = request.get_json()
+    data = sanitize_input(request.get_json())
 
-    # Sanitize input
-    data = sanitize_input(data)
-
-    # Update fields in the Good model
     for key, value in data.items():
         if hasattr(good, key):
             setattr(good, key, value)
 
-    # Update inventory stock count if provided
     if 'stock_count' in data:
         if good.inventory:
             good.inventory.stock_count = data['stock_count']
         else:
-            # Create inventory if it doesn't exist
             new_inventory = Inventory(stock_count=data['stock_count'], good=good)
             db.session.add(new_inventory)
 
     db.session.commit()
+
     return jsonify({
         "message": "Good and inventory updated successfully",
         "updated_good": {
@@ -144,10 +196,18 @@ def update_good(good_id):
 @app.route('/goods', methods=['GET'])
 @jwt_required(optional=True)
 def get_all_goods():
+    """
+    Retrieves all goods with optional inventory details.
+
+    Returns:
+        Response: JSON response containing a list of goods and their details.
+        Admin users see inventory details; regular users do not.
+    """
     claims = get_jwt()
     is_admin = claims.get('is_admin', False) if claims else False
 
     goods = Good.query.all()
+
     return jsonify([{
         "id": g.id,
         "name": g.name,
@@ -161,12 +221,23 @@ def get_all_goods():
 @app.route('/goods/<int:good_id>', methods=['GET'])
 @jwt_required(optional=True)
 def get_good(good_id):
+    """
+    Retrieves details of a specific good.
+
+    Args:
+        good_id (int): ID of the good to retrieve.
+
+    Returns:
+        Response: JSON response containing good details or an error message
+        if not found.
+    """
     claims = get_jwt()
     is_admin = claims.get('is_admin', False) if claims else False
 
     good = Good.query.get(good_id)
     if not good:
         return jsonify({"error": "Good not found"}), 404
+
     return jsonify({
         "id": good.id,
         "name": good.name,
@@ -180,18 +251,26 @@ def get_good(good_id):
 @app.route('/goods/<int:good_id>', methods=['DELETE'])
 @jwt_required()
 def delete_good(good_id):
+    """
+    Deletes a good and its associated inventory.
+
+    Admin-only endpoint.
+
+    Args:
+        good_id (int): ID of the good to delete.
+
+    Returns:
+        Response: JSON response containing a success message or error message
+        if not found or unauthorized.
+    """
     claims = get_jwt()
     if not claims.get('is_admin', False):
         return jsonify({"error": "Unauthorized action"}), 403
 
-    # Retrieve the good from the database
     good = Good.query.get(good_id)
-
-    # Check if the good exists
     if not good:
         return jsonify({"error": "Good not found"}), 404
 
-    # Delete the good and its associated inventory (if exists)
     if good.inventory:
         db.session.delete(good.inventory)
 
@@ -201,6 +280,11 @@ def delete_good(good_id):
     return jsonify({"message": "Good deleted successfully"}), 200
 
 if __name__ == '__main__':
+    """
+    Entry point for running the Flask application.
+
+    Ensures the database tables are created before starting the server.
+    """
     with app.app_context():
-        db.create_all()  # Ensure tables are created
+        db.create_all()
     app.run(debug=True)
