@@ -10,6 +10,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
+
 # Helper function for sanitizing input
 def sanitize_input(data):
     if isinstance(data, str):
