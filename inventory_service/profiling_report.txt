@@ -1,0 +1,2 @@
+Welcome to the profile statistics browser.
+inventory_service.prof% 

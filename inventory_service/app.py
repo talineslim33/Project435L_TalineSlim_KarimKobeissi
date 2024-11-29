@@ -25,15 +25,16 @@ Modules:
 from flask import Flask, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
-from inventory_service.models import db, Good, Inventory
+from models import db, Good, Inventory
 import bleach
 import sys
 import os
-
+import cProfile
 # Add parent directory to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import config  # Import config after adding parent directory
+from memory_profiler import profile
 
 app = Flask(__name__)
 
@@ -70,6 +71,7 @@ def sanitize_input(data):
 # Add a new good and its inventory (Admin only)
 @app.route('/goods', methods=['POST'])
 @jwt_required()
+@profile
 def add_good():
     """
     Adds a new good with its inventory details.
@@ -106,6 +108,7 @@ def add_good():
 # Deduct stock from inventory (Admin only)
 @app.route('/goods/<int:good_id>/inventory/deduct', methods=['POST'])
 @jwt_required()
+@profile
 def deduct_stock(good_id):
     """
     Deducts stock from a good's inventory.
@@ -144,6 +147,7 @@ def deduct_stock(good_id):
 # Update fields of a good (Admin only)
 @app.route('/goods/<int:good_id>', methods=['PUT'])
 @jwt_required()
+@profile
 def update_good(good_id):
     """
     Updates the details of a good and its inventory.
@@ -195,6 +199,7 @@ def update_good(good_id):
 # Get all goods with inventory details
 @app.route('/goods', methods=['GET'])
 @jwt_required(optional=True)
+@profile
 def get_all_goods():
     """
     Retrieves all goods with optional inventory details.
@@ -220,6 +225,7 @@ def get_all_goods():
 # Get a specific good with inventory details
 @app.route('/goods/<int:good_id>', methods=['GET'])
 @jwt_required(optional=True)
+@profile
 def get_good(good_id):
     """
     Retrieves details of a specific good.
@@ -250,6 +256,7 @@ def get_good(good_id):
 # Delete a Good (Admin only)
 @app.route('/goods/<int:good_id>', methods=['DELETE'])
 @jwt_required()
+@profile
 def delete_good(good_id):
     """
     Deletes a good and its associated inventory.
@@ -279,12 +286,18 @@ def delete_good(good_id):
 
     return jsonify({"message": "Good deleted successfully"}), 200
 
+
 if __name__ == '__main__':
     """
     Entry point for running the Flask application.
 
     Ensures the database tables are created before starting the server.
     """
+    
+    profiler = cProfile.Profile()
+    profiler.enable()  # Start profiling
     with app.app_context():
         db.create_all()
     app.run(debug=True)
+    profiler.disable()  # Stop profiling
+    profiler.dump_stats('inventory_service.prof')  # Save profiling stats

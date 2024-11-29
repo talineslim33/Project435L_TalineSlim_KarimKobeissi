@@ -19,6 +19,6 @@ class Inventory(db.Model):
     stock_count = db.Column(db.Integer, nullable=False, default=0)
 
     # Foreign key to link with Good
-    good_id = db.Column(db.Integer, db.ForeignKey('good.id'), nullable=False)
+    good_id = db.Column(db.Integer, db.ForeignKey('good.id', ondelete='CASCADE'), nullable=False)
     good = db.relationship("Good", back_populates="inventory")
  
