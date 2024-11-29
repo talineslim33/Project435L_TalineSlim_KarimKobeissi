@@ -21,6 +21,7 @@ import config
 
 from models import db, Customer  # Ensure 'Customer' model includes 'is_admin' field
 
+
 app = Flask(__name__)
 
 app.config['JWT_SECRET_KEY'] = config.JWT_SECRET_KEY
