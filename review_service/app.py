@@ -22,7 +22,7 @@ Modules:
 """
 
 from flask import Flask, request, jsonify
-from review_service.models import db, Review
+from models import db, Review
 from flask_jwt_extended import (
     JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
 )
@@ -366,12 +366,23 @@ def get_review_details(review_id):
         "flagged": review.flagged
     }), 200
 
+
 if __name__ == '__main__':
     """
     Entry point for running the Flask application.
 
     Ensures the database tables are created before starting the server.
     """
+    import cProfile
+    import pstats
     with app.app_context():
         db.create_all()
+    profiler = cProfile.Profile()
+    profiler.enable()
     app.run(debug=True)
+    profiler.disable()
+    stats = pstats.Stats(profiler)
+    stats.strip_dirs()
+    stats.sort_stats('time')  # Sort by time
+    stats.print_stats(30)    # Print top 30 results
+

@@ -1,0 +1,332 @@
+Timer unit: 1e-07 s
+
+Total time: 0 s
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\app.py
+Function: submit_review at line 86
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    86                                           @app.route('/reviews', methods=['POST'])
+    87                                           @jwt_required()
+    88                                           def submit_review():
+    89                                               """
+    90                                               Submits a new review for a product.
+    91                                           
+    92                                               Authenticated users can submit reviews for products they have purchased.
+    93                                           
+    94                                               Returns:
+    95                                                   Response: JSON response containing a success message and review ID,
+    96                                                   or an error message if validation fails.
+    97                                               """
+    98                                               current_user_id = get_jwt_identity()
+    99                                           
+   100                                               try:
+   101                                                   data = review_schema.load(request.get_json())
+   102                                               except ValidationError as err:
+   103                                                   return jsonify(err.messages), 400
+   104                                           
+   105                                               data = sanitize_input(data)
+   106                                               if data['customer_id'] != int(current_user_id):
+   107                                                   return jsonify({"error": "Unauthorized action"}), 403
+   108                                           
+   109                                               new_review = Review(
+   110                                                   customer_id=data['customer_id'],
+   111                                                   product_id=data['product_id'],
+   112                                                   rating=data['rating'],
+   113                                                   comment=data['comment'],
+   114                                                   flagged=False,
+   115                                                   moderated=False
+   116                                               )
+   117                                               db.session.add(new_review)
+   118                                               db.session.commit()
+   119                                               return jsonify({"message": "Review submitted successfully!", "review_id": new_review.id}), 201
+
+Total time: 0 s
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\app.py
+Function: update_review at line 122
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   122                                           @app.route('/reviews/<int:review_id>', methods=['PUT'])
+   123                                           @jwt_required()
+   124                                           def update_review(review_id):
+   125                                               """
+   126                                               Updates an existing review.
+   127                                           
+   128                                               Users can only update their own reviews.
+   129                                           
+   130                                               Args:
+   131                                                   review_id (int): ID of the review to update.
+   132                                           
+   133                                               Returns:
+   134                                                   Response: JSON response containing success message, or an error message
+   135                                                   if unauthorized or invalid data.
+   136                                               """
+   137                                               current_user_id = get_jwt_identity()
+   138                                               review = Review.query.get(review_id)
+   139                                           
+   140                                               if not review:
+   141                                                   return jsonify({"error": "Review not found"}), 404
+   142                                           
+   143                                               if review.customer_id != int(current_user_id):
+   144                                                   return jsonify({"error": "Unauthorized action"}), 403
+   145                                           
+   146                                               try:
+   147                                                   data = review_schema.load(request.get_json(), partial=True)
+   148                                               except ValidationError as err:
+   149                                                   return jsonify(err.messages), 400
+   150                                           
+   151                                               data = sanitize_input(data)
+   152                                           
+   153                                               if 'rating' in data:
+   154                                                   review.rating = data['rating']
+   155                                               if 'comment' in data:
+   156                                                   review.comment = data['comment']
+   157                                           
+   158                                               db.session.commit()
+   159                                               return jsonify({"message": "Review updated successfully"}), 200
+
+Total time: 0 s
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\app.py
+Function: delete_review at line 162
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   162                                           @app.route('/reviews/<int:review_id>', methods=['DELETE'])
+   163                                           @jwt_required()
+   164                                           def delete_review(review_id):
+   165                                               """
+   166                                               Deletes a review.
+   167                                           
+   168                                               Users can only delete their own reviews.
+   169                                           
+   170                                               Args:
+   171                                                   review_id (int): ID of the review to delete.
+   172                                           
+   173                                               Returns:
+   174                                                   Response: JSON response containing success message, or an error message
+   175                                                   if unauthorized or review not found.
+   176                                               """
+   177                                               current_user_id = get_jwt_identity()
+   178                                               review = Review.query.get(review_id)
+   179                                           
+   180                                               if not review:
+   181                                                   return jsonify({"error": "Review not found"}), 404
+   182                                           
+   183                                               if review.customer_id != int(current_user_id):
+   184                                                   return jsonify({"error": "Unauthorized action"}), 403
+   185                                           
+   186                                               db.session.delete(review)
+   187                                               db.session.commit()
+   188                                               return jsonify({"message": "Review deleted successfully"}), 200
+
+Total time: 0 s
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\app.py
+Function: flag_review at line 191
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   191                                           @app.route('/reviews/<int:review_id>/flag', methods=['POST'])
+   192                                           @jwt_required()
+   193                                           def flag_review(review_id):
+   194                                               """
+   195                                               Flags a review for moderation.
+   196                                           
+   197                                               Any authenticated user can flag a review.
+   198                                           
+   199                                               Args:
+   200                                                   review_id (int): ID of the review to flag.
+   201                                           
+   202                                               Returns:
+   203                                                   Response: JSON response containing a success message, or an error
+   204                                                   message if review not found.
+   205                                               """
+   206                                               review = Review.query.get(review_id)
+   207                                           
+   208                                               if not review:
+   209                                                   return jsonify({"error": "Review not found"}), 404
+   210                                           
+   211                                               review.flagged = True
+   212                                               db.session.commit()
+   213                                               return jsonify({"message": "Review flagged for moderation"}), 200
+
+Total time: 0 s
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\app.py
+Function: moderate_review at line 215
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   215                                           @app.route('/reviews/<int:review_id>/moderate', methods=['POST'])
+   216                                           @jwt_required()
+   217                                           def moderate_review(review_id):
+   218                                               """
+   219                                               Moderates a flagged review.
+   220                                           
+   221                                               Admin-only endpoint. Allows admins to approve or reject flagged reviews.
+   222                                           
+   223                                               Args:
+   224                                                   review_id (int): ID of the review to moderate.
+   225                                           
+   226                                               Returns:
+   227                                                   Response: JSON response containing a success message if the moderation
+   228                                                   action is completed, or an error message if unauthorized or review not found.
+   229                                               """
+   230                                               claims = get_jwt()
+   231                                               if not claims.get('is_admin', False):
+   232                                                   return jsonify({"error": "Unauthorized action"}), 403
+   233                                           
+   234                                               review = Review.query.get(review_id)
+   235                                               if not review:
+   236                                                   return jsonify({"error": "Review not found"}), 404
+   237                                           
+   238                                               data = request.get_json()
+   239                                           
+   240                                               if 'approve' in data and data['approve']:
+   241                                                   review.moderated = True
+   242                                                   review.flagged = False
+   243                                                   db.session.commit()
+   244                                                   return jsonify({"message": "Review approved."}), 200
+   245                                           
+   246                                               if 'reject' in data and data['reject']:
+   247                                                   review.comment = "[Removed due to inappropriate content]"
+   248                                                   review.moderated = True
+   249                                                   review.flagged = False
+   250                                                   db.session.commit()
+   251                                                   return jsonify({"message": "Review rejected as inappropriate."}), 200
+   252                                           
+   253                                               return jsonify({"error": "Invalid moderation action"}), 400
+
+Total time: 0 s
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\app.py
+Function: get_product_reviews at line 256
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   256                                           @app.route('/reviews/product/<int:product_id>', methods=['GET'])
+   257                                           def get_product_reviews(product_id):
+   258                                               """
+   259                                               Retrieves all reviews for a specific product.
+   260                                           
+   261                                               Public endpoint. No authentication required.
+   262                                           
+   263                                               Args:
+   264                                                   product_id (int): ID of the product to retrieve reviews for.
+   265                                           
+   266                                               Returns:
+   267                                                   Response: JSON response containing a list of reviews for the product.
+   268                                               """
+   269                                               reviews = Review.query.filter_by(product_id=product_id).all()
+   270                                               return jsonify([
+   271                                                   {"id": r.id, "rating": r.rating, "comment": r.comment, "timestamp": r.timestamp, "customer_id": r.customer_id}
+   272                                                   for r in reviews
+   273                                               ]), 200
+
+Total time: 0 s
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\app.py
+Function: get_customer_reviews at line 276
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   276                                           @app.route('/reviews/customer/<int:customer_id>', methods=['GET'])
+   277                                           @jwt_required()
+   278                                           def get_customer_reviews(customer_id):
+   279                                               """
+   280                                               Retrieves all reviews submitted by a specific customer.
+   281                                           
+   282                                               Authenticated users can only view their own reviews.
+   283                                           
+   284                                               Args:
+   285                                                   customer_id (int): ID of the customer whose reviews are being requested.
+   286                                           
+   287                                               Returns:
+   288                                                   Response: JSON response containing a list of the customer's reviews,
+   289                                                   or an error message if unauthorized.
+   290                                               """
+   291                                               current_user_id = get_jwt_identity()
+   292                                           
+   293                                               if customer_id != int(current_user_id):
+   294                                                   return jsonify({"error": "Unauthorized action"}), 403
+   295                                           
+   296                                               reviews = Review.query.filter_by(customer_id=customer_id).all()
+   297                                               return jsonify([
+   298                                                   {"id": r.id, "product_id": r.product_id, "rating": r.rating, "comment": r.comment, "timestamp": r.timestamp}
+   299                                                   for r in reviews
+   300                                               ]), 200
+
+Total time: 0 s
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\app.py
+Function: get_flagged_reviews at line 303
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   303                                           @app.route('/reviews/flagged', methods=['GET'])
+   304                                           @jwt_required()
+   305                                           def get_flagged_reviews():
+   306                                               """
+   307                                               Retrieves all flagged reviews pending moderation.
+   308                                           
+   309                                               Admin-only endpoint.
+   310                                           
+   311                                               Returns:
+   312                                                   Response: JSON response containing a list of flagged reviews, or an error
+   313                                                   message if unauthorized.
+   314                                               """
+   315                                               claims = get_jwt()
+   316                                               if not claims.get('is_admin', False):
+   317                                                   return jsonify({"error": "Unauthorized action"}), 403
+   318                                           
+   319                                               flagged_reviews = Review.query.filter_by(flagged=True, moderated=False).all()
+   320                                               return jsonify([
+   321                                                   {
+   322                                                       "id": r.id,
+   323                                                       "customer_id": r.customer_id,
+   324                                                       "product_id": r.product_id,
+   325                                                       "rating": r.rating,
+   326                                                       "comment": r.comment,
+   327                                                       "timestamp": r.timestamp
+   328                                                   }
+   329                                                   for r in flagged_reviews
+   330                                               ]), 200
+
+Total time: 0 s
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\app.py
+Function: get_review_details at line 333
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   333                                           @app.route('/reviews/<int:review_id>', methods=['GET'])
+   334                                           @jwt_required()
+   335                                           def get_review_details(review_id):
+   336                                               """
+   337                                               Retrieves details of a specific review.
+   338                                           
+   339                                               Authenticated users can only view their own reviews, while admins can view any review.
+   340                                           
+   341                                               Args:
+   342                                                   review_id (int): ID of the review to retrieve.
+   343                                           
+   344                                               Returns:
+   345                                                   Response: JSON response containing the review details, or an error message
+   346                                                   if unauthorized or review not found.
+   347                                               """
+   348                                               review = Review.query.get(review_id)
+   349                                               if not review:
+   350                                                   return jsonify({"error": "Review not found"}), 404
+   351                                           
+   352                                               current_user_id = get_jwt_identity()
+   353                                               claims = get_jwt()
+   354                                           
+   355                                               if review.customer_id != int(current_user_id) and not claims.get('is_admin', False):
+   356                                                   return jsonify({"error": "Unauthorized action"}), 403
+   357                                           
+   358                                               return jsonify({
+   359                                                   "id": review.id,
+   360                                                   "customer_id": review.customer_id,
+   361                                                   "product_id": review.product_id,
+   362                                                   "rating": review.rating,
+   363                                                   "comment": review.comment,
+   364                                                   "timestamp": review.timestamp,
+   365                                                   "moderated": review.moderated,
+   366                                                   "flagged": review.flagged
+   367                                               }), 200
+

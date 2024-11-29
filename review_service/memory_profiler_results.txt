@@ -1,0 +1,152 @@
+None
+Filename: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\memory_profiler_script.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+    25     61.8 MiB     61.8 MiB           1   @profile
+    26                                         def test_submit_review():
+    27     62.5 MiB      0.4 MiB           2       with app.test_request_context():
+    28     62.3 MiB      0.0 MiB           1           token = create_access_token(identity=1)
+    29     62.5 MiB      0.1 MiB           2           with app.test_client() as client:
+    30     62.5 MiB      0.1 MiB           2               response = client.post(
+    31     62.4 MiB      0.0 MiB           1                   '/reviews',
+    32     62.4 MiB      0.0 MiB           1                   json={"customer_id": 1, "product_id": 1, "rating": 5, "comment": "Great product!"},
+    33     62.4 MiB      0.0 MiB           1                   headers={"Authorization": f"Bearer {token}"},
+    34                                                     )
+    35     62.5 MiB      0.0 MiB           1               print(response.json)
+
+
+None
+Filename: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\memory_profiler_script.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+    38     62.5 MiB     62.5 MiB           1   @profile
+    39                                         def test_update_review():
+    40     62.5 MiB      0.0 MiB           2       with app.test_request_context():
+    41     62.5 MiB      0.0 MiB           1           token = create_access_token(identity=1)
+    42     62.5 MiB      0.0 MiB           2           with app.test_client() as client:
+    43     62.5 MiB      0.0 MiB           2               response = client.put(
+    44     62.5 MiB      0.0 MiB           1                   '/reviews/1',
+    45     62.5 MiB      0.0 MiB           1                   json={"rating": 4, "comment": "Updated review comment"},
+    46     62.5 MiB      0.0 MiB           1                   headers={"Authorization": f"Bearer {token}"},
+    47                                                     )
+    48     62.5 MiB      0.0 MiB           1               print(response.json)
+
+
+None
+Filename: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\memory_profiler_script.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+    51     62.5 MiB     62.5 MiB           1   @profile
+    52                                         def test_delete_review():
+    53     62.6 MiB      0.0 MiB           2       with app.test_request_context():
+    54     62.6 MiB      0.0 MiB           1           token = create_access_token(identity=1)
+    55     62.6 MiB      0.0 MiB           2           with app.test_client() as client:
+    56     62.6 MiB      0.0 MiB           2               response = client.delete(
+    57     62.6 MiB      0.0 MiB           1                   '/reviews/1',
+    58     62.6 MiB      0.0 MiB           1                   headers={"Authorization": f"Bearer {token}"},
+    59                                                     )
+    60     62.6 MiB      0.0 MiB           1               print(response.json)
+
+
+None
+Filename: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\memory_profiler_script.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+    63     62.6 MiB     62.6 MiB           1   @profile
+    64                                         def test_flag_review():
+    65     62.6 MiB      0.0 MiB           2       with app.test_request_context():
+    66     62.6 MiB      0.0 MiB           1           token = create_access_token(identity=1)
+    67     62.6 MiB      0.0 MiB           2           with app.test_client() as client:
+    68     62.6 MiB      0.0 MiB           2               response = client.post(
+    69     62.6 MiB      0.0 MiB           1                   '/reviews/1/flag',
+    70     62.6 MiB      0.0 MiB           1                   headers={"Authorization": f"Bearer {token}"},
+    71                                                     )
+    72     62.6 MiB      0.0 MiB           1               print(response.json)
+
+
+None
+Filename: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\memory_profiler_script.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+    75     62.6 MiB     62.6 MiB           1   @profile
+    76                                         def test_moderate_review():
+    77     62.6 MiB      0.0 MiB           2       with app.test_request_context():
+    78     62.6 MiB      0.0 MiB           1           token = create_access_token(identity=1, additional_claims={"is_admin": True})
+    79     62.6 MiB      0.0 MiB           2           with app.test_client() as client:
+    80     62.6 MiB      0.0 MiB           2               response = client.post(
+    81     62.6 MiB      0.0 MiB           1                   '/reviews/1/moderate',
+    82     62.6 MiB      0.0 MiB           1                   json={"approve": True},
+    83     62.6 MiB      0.0 MiB           1                   headers={"Authorization": f"Bearer {token}"},
+    84                                                     )
+    85     62.6 MiB      0.0 MiB           1               print(response.json)
+
+
+None
+Filename: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\memory_profiler_script.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+    88     62.6 MiB     62.6 MiB           1   @profile
+    89                                         def test_get_product_reviews():
+    90     62.6 MiB      0.0 MiB           2       with app.test_request_context():
+    91     62.6 MiB      0.0 MiB           2           with app.test_client() as client:
+    92     62.6 MiB      0.0 MiB           1               response = client.get('/reviews/product/1')
+    93     62.6 MiB      0.0 MiB           1               print(response.json)
+
+
+None
+Filename: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\memory_profiler_script.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+    96     62.6 MiB     62.6 MiB           1   @profile
+    97                                         def test_get_customer_reviews():
+    98     62.6 MiB      0.0 MiB           2       with app.test_request_context():
+    99     62.6 MiB      0.0 MiB           1           token = create_access_token(identity=1)
+   100     62.6 MiB      0.0 MiB           2           with app.test_client() as client:
+   101     62.6 MiB      0.0 MiB           2               response = client.get(
+   102     62.6 MiB      0.0 MiB           1                   '/reviews/customer/1',
+   103     62.6 MiB      0.0 MiB           1                   headers={"Authorization": f"Bearer {token}"},
+   104                                                     )
+   105     62.6 MiB      0.0 MiB           1               print(response.json)
+
+
+None
+Filename: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\memory_profiler_script.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   108     62.6 MiB     62.6 MiB           1   @profile
+   109                                         def test_get_flagged_reviews():
+   110     62.6 MiB      0.0 MiB           2       with app.test_request_context():
+   111     62.6 MiB      0.0 MiB           1           token = create_access_token(identity=1, additional_claims={"is_admin": True})
+   112     62.6 MiB      0.0 MiB           2           with app.test_client() as client:
+   113     62.6 MiB      0.0 MiB           2               response = client.get(
+   114     62.6 MiB      0.0 MiB           1                   '/reviews/flagged',
+   115     62.6 MiB      0.0 MiB           1                   headers={"Authorization": f"Bearer {token}"},
+   116                                                     )
+   117     62.6 MiB      0.0 MiB           1               print(response.json)
+
+
+None
+Filename: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\review_service\memory_profiler_script.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   120     62.6 MiB     62.6 MiB           1   @profile
+   121                                         def test_get_review_details():
+   122     62.6 MiB      0.0 MiB           2       with app.test_request_context():
+   123     62.6 MiB      0.0 MiB           1           token = create_access_token(identity=1)
+   124     62.6 MiB      0.0 MiB           2           with app.test_client() as client:
+   125     62.6 MiB      0.0 MiB           2               response = client.get(
+   126     62.6 MiB      0.0 MiB           1                   '/reviews/1',
+   127     62.6 MiB      0.0 MiB           1                   headers={"Authorization": f"Bearer {token}"},
+   128                                                     )
+   129     62.6 MiB      0.0 MiB           1               print(response.json)
+
+
