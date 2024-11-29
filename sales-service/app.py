@@ -1,4 +1,3 @@
-import time
 from flask import Flask, request, jsonify
 from flask_jwt_extended import (
     JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
@@ -22,12 +21,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = config.JWT_SECRET_KEY
 app.config['JWT_ALGORITHM'] = config.JWT_ALGORITHM
 
-# Rate limiting configurations
-RATE_LIMIT_WINDOW = 60  # in seconds (1 minute window)
-MAX_REQUESTS_PER_WINDOW = 10  # maximum requests per IP per window
-
-rate_limit_data = {}
-
 db.init_app(app)
 jwt = JWTManager(app)
 
@@ -50,37 +43,9 @@ def sanitize_input(data):
     else:
         return data
 
-# Rate limiting decorator
-def rate_limiter(func):
-    def wrapper(*args, **kwargs):
-        ip_address = request.remote_addr
-        current_time = time.time()
-
-        # Check if the IP is in the rate limit data
-        if ip_address in rate_limit_data:
-            request_count, last_request_time = rate_limit_data[ip_address]
-
-            # If the window has expired, reset the count and timestamp
-            if current_time - last_request_time > RATE_LIMIT_WINDOW:
-                rate_limit_data[ip_address] = [1, current_time]
-            else:
-                # If within the window, increase the count
-                if request_count >= MAX_REQUESTS_PER_WINDOW:
-                    return jsonify({'error': 'Too many requests. Please try again later.'}), 429
-                else:
-                    rate_limit_data[ip_address][0] += 1
-        else:
-            # If the IP is new, set up initial request count and timestamp
-            rate_limit_data[ip_address] = [1, current_time]
-
-        return func(*args, **kwargs)
-
-    return wrapper
-
 # Display available goods
 @app.route('/sales/goods', methods=['GET'])
 @jwt_required(optional=True)
-@rate_limiter
 def display_available_goods():
     claims = get_jwt()
     is_admin = claims.get('is_admin', False) if claims else False
@@ -93,7 +58,6 @@ def display_available_goods():
 # Get good details
 @app.route('/sales/goods/<int:good_id>', methods=['GET'])
 @jwt_required(optional=True)
-@rate_limiter
 def get_good_details(good_id):
     claims = get_jwt()
     is_admin = claims.get('is_admin', False) if claims else False
@@ -118,7 +82,6 @@ def get_good_details(good_id):
 # Make a sale (Authenticated users only)
 @app.route('/sales', methods=['POST'])
 @jwt_required()
-@rate_limiter
 def make_sale():
     current_user_id = get_jwt_identity()
 
@@ -167,7 +130,6 @@ def make_sale():
 # Get customer's purchase history (Authenticated users only)
 @app.route('/sales/history', methods=['GET'])
 @jwt_required()
-@rate_limiter
 def get_purchase_history():
     current_user_id = get_jwt_identity()
     customer = Customer.query.get(current_user_id)
@@ -188,7 +150,6 @@ def get_purchase_history():
 # Get all purchase histories (Admin only)
 @app.route('/sales/history/all', methods=['GET'])
 @jwt_required()
-@rate_limiter
 def get_all_purchase_histories():
     claims = get_jwt()
     if not claims.get('is_admin', False):
@@ -208,7 +169,6 @@ def get_all_purchase_histories():
 
 @app.route('/wishlist', methods=['POST'])
 @jwt_required()
-@rate_limiter
 def add_to_wishlist():
     current_user_id = get_jwt_identity()
     data = request.get_json()
@@ -233,7 +193,6 @@ def add_to_wishlist():
 
 @app.route('/wishlist/<int:wishlist_id>', methods=['DELETE'])
 @jwt_required()
-@rate_limiter
 def remove_from_wishlist(wishlist_id):
     current_user_id = get_jwt_identity()
 
@@ -246,9 +205,9 @@ def remove_from_wishlist(wishlist_id):
     db.session.commit()
     return jsonify({"message": "Item removed from wishlist"}), 200
 
+
 @app.route('/wishlist', methods=['GET'])
 @jwt_required()
-@rate_limiter
 def get_wishlist():
     current_user_id = get_jwt_identity()
 
@@ -264,9 +223,9 @@ def get_wishlist():
         } for item in wishlist_items
     ]), 200
 
+
 @app.route('/wishlist/<int:good_id>', methods=['GET'])
 @jwt_required()
-@rate_limiter
 def is_in_wishlist(good_id):
     current_user_id = get_jwt_identity()
 
@@ -276,6 +235,7 @@ def is_in_wishlist(good_id):
         return jsonify({"in_wishlist": True}), 200
     else:
         return jsonify({"in_wishlist": False}), 404
+
 
 from collections import Counter
 
@@ -312,7 +272,6 @@ def get_recommendations_for_customer(customer_id):
 
 @app.route('/sales/recommendations', methods=['GET'])
 @jwt_required()
-@rate_limiter
 def get_recommendations():
     # Get the current user's ID from JWT
     current_user_id = get_jwt_identity()
@@ -344,9 +303,9 @@ def add_expiry_notification():
     # Commit to save notifications to the database
     db.session.commit()
     
+    
 @app.route('/notifications', methods=['GET'])
 @jwt_required()
-@rate_limiter
 def get_notifications():
     current_user_id = get_jwt_identity()
 
@@ -370,6 +329,7 @@ def get_notifications():
             "good_id": notification.good_id
         } for notification in notifications
     ]), 200
+
 
 if __name__ == '__main__':
     with app.app_context():
