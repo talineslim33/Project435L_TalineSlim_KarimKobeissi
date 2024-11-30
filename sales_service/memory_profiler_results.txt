@@ -1,0 +1,250 @@
+ * Serving Flask app 'memory_profiler'
+ * Debug mode: on
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   107     65.2 MiB     65.2 MiB           1   @app.route('/sales/goods', methods=['GET'])
+   108                                         @jwt_required(optional=True)
+   109                                         @profile_line
+   110                                         @profile
+   111                                         def display_available_goods():
+   112                                             """
+   113                                             Displays all goods with stock information.
+   114                                         
+   115                                             Returns:
+   116                                                 Response: JSON response with available goods. Admins see stock and price details.
+   117                                             """
+   118     65.2 MiB      0.0 MiB           1       claims = get_jwt()
+   119     65.2 MiB      0.0 MiB           1       is_admin = claims.get('is_admin', False) if claims else False
+   120     46.4 MiB    -18.8 MiB           1       goods = Good.query.join(Inventory).filter(Inventory.stock_count > 0).all()
+   121     46.6 MiB      0.2 MiB          26       return jsonify([
+   122     46.4 MiB      0.0 MiB          23           {"name": g.name, "price": g.price_per_item} if is_admin else {"name": g.name}
+   123     46.4 MiB      0.0 MiB          24           for g in goods
+   124     46.6 MiB      0.0 MiB           1       ]), 200
+
+
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   127     47.5 MiB     47.5 MiB           1   @app.route('/sales/goods/<int:good_id>', methods=['GET'])
+   128                                         @jwt_required(optional=True)
+   129                                         @profile_line
+   130                                         @profile
+   131                                         def get_good_details(good_id):
+   132                                             """
+   133                                             Retrieves detailed information about a specific good.
+   134                                         
+   135                                             Args:
+   136                                                 good_id (int): ID of the good to retrieve.
+   137                                         
+   138                                             Returns:
+   139                                                 Response: JSON response with good details. Admins see full details, while users see limited details.
+   140                                             """
+   141     47.5 MiB      0.0 MiB           1       claims = get_jwt()
+   142     47.5 MiB      0.0 MiB           1       is_admin = claims.get('is_admin', False) if claims else False
+   143                                         
+   144     47.8 MiB      0.3 MiB           1       good = Good.query.get(good_id)
+   145     47.8 MiB      0.0 MiB           1       if not good:
+   146                                                 return jsonify({"error": "Good not found"}), 404
+   147                                         
+   148     47.8 MiB      0.0 MiB           1       response_data = {
+   149     47.8 MiB      0.0 MiB           1           "name": good.name,
+   150     47.8 MiB      0.0 MiB           1           "price_per_item": good.price_per_item
+   151                                             }
+   152     47.8 MiB      0.0 MiB           1       if is_admin:
+   153                                                 response_data.update({
+   154                                                     "category": good.category,
+   155                                                     "description": good.description,
+   156                                                     "stock_count": good.inventory.stock_count if good.inventory else 0
+   157                                                 })
+   158                                         
+   159     47.8 MiB      0.0 MiB           1       return jsonify(response_data), 200
+
+
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   162     47.9 MiB     47.9 MiB           1   @app.route('/sales', methods=['POST'])
+   163                                         @jwt_required()
+   164                                         @profile_line
+   165                                         @profile
+   166                                         def make_sale():
+   167                                             """
+   168                                             Processes a sale for a customer.
+   169                                         
+   170                                             Args:
+   171                                                 None (data is provided in the request body).
+   172                                         
+   173                                             Returns:
+   174                                                 Response: JSON response with sale confirmation, updated wallet balance, and remaining stock.
+   175                                             """
+   176     47.9 MiB      0.0 MiB           1       current_user_id = get_jwt_identity()
+   177                                         
+   178     47.9 MiB      0.0 MiB           1       try:
+   179     48.3 MiB      0.4 MiB           1           data = sale_schema.load(request.get_json())
+   180                                             except ValidationError as err:
+   181                                                 return jsonify(err.messages), 400
+   182                                         
+   183     49.9 MiB      1.6 MiB           1       data = sanitize_input(data)
+   184                                         
+   185     50.0 MiB      0.1 MiB           1       customer = Customer.query.get(current_user_id)
+   186     50.0 MiB      0.1 MiB           1       good = Good.query.filter_by(name=data['good_name']).first()
+   187                                         
+   188     50.0 MiB      0.0 MiB           1       if not customer:
+   189                                                 return jsonify({"error": "Customer not found"}), 404
+   190     50.0 MiB      0.0 MiB           1       if not good or not good.inventory or good.inventory.stock_count < data['quantity']:
+   191     50.0 MiB      0.0 MiB           1           return jsonify({"error": "Good not available or insufficient stock"}), 400
+   192                                         
+   193                                             total_price = data['quantity'] * good.price_per_item
+   194                                             if customer.wallet_balance < total_price:
+   195                                                 return jsonify({"error": "Insufficient funds"}), 400
+   196                                         
+   197                                             customer.wallet_balance -= total_price
+   198                                             good.inventory.stock_count -= data['quantity']
+   199                                         
+   200                                             sale = Sale(
+   201                                                 customer_id=customer.id,
+   202                                                 good_id=good.id,
+   203                                                 quantity=data['quantity'],
+   204                                                 total_price=total_price
+   205                                             )
+   206                                             db.session.add(sale)
+   207                                             db.session.commit()
+   208                                         
+   209                                             return jsonify({
+   210                                                 "message": "Sale successful",
+   211                                                 "customer_balance": customer.wallet_balance,
+   212                                                 "remaining_stock": good.inventory.stock_count
+   213                                             }), 200
+
+
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   216     50.1 MiB     50.1 MiB           1   @app.route('/sales/history', methods=['GET'])
+   217                                         @jwt_required()
+   218                                         @profile_line
+   219                                         @profile
+   220                                         def get_purchase_history():
+   221                                             """
+   222                                             Retrieves purchase history for the authenticated customer.
+   223                                         
+   224                                             Returns:
+   225                                                 Response: JSON response with a list of purchase history.
+   226                                             """
+   227     50.1 MiB      0.0 MiB           1       current_user_id = get_jwt_identity()
+   228     50.4 MiB      0.3 MiB           1       customer = Customer.query.get(current_user_id)
+   229     50.4 MiB      0.0 MiB           1       if not customer:
+   230                                                 return jsonify({"error": "Customer not found"}), 404
+   231                                         
+   232     50.4 MiB      0.0 MiB           1       sales = Sale.query.filter_by(customer_id=customer.id).all()
+   233     50.4 MiB      0.0 MiB           3       return jsonify([
+   234                                                 {
+   235                                                     "good_name": sale.good.name,
+   236                                                     "quantity": sale.quantity,
+   237                                                     "total_price": sale.total_price,
+   238                                                     "timestamp": sale.timestamp
+   239                                                 }
+   240     50.4 MiB      0.0 MiB           1           for sale in sales
+   241     50.4 MiB      0.0 MiB           1       ]), 200
+
+
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   274     50.5 MiB     50.5 MiB           1   @app.route('/wishlist', methods=['POST'])
+   275                                         @jwt_required()
+   276                                         @profile_line
+   277                                         @profile
+   278                                         def add_to_wishlist():
+   279                                             """
+   280                                             Adds an item to the customer's wishlist.
+   281                                         
+   282                                             Args:
+   283                                                 None (data is provided in the request body).
+   284                                         
+   285                                             Returns:
+   286                                                 Response: JSON response confirming addition or an error message if the item already exists.
+   287                                             """
+   288     50.5 MiB      0.0 MiB           1       current_user_id = get_jwt_identity()
+   289     50.5 MiB      0.0 MiB           1       data = request.get_json()
+   290                                         
+   291     50.5 MiB      0.0 MiB           1       good_id = data.get('good_id')
+   292                                         
+   293     50.5 MiB      0.0 MiB           1       good = Good.query.get(good_id)
+   294     50.5 MiB      0.0 MiB           1       if not good:
+   295                                                 return jsonify({"error": "Good not found"}), 404
+   296                                         
+   297     50.5 MiB      0.0 MiB           1       if Wishlist.query.filter_by(customer_id=current_user_id, good_id=good_id).first():
+   298     50.5 MiB      0.0 MiB           1           return jsonify({"message": "Item already in wishlist"}), 400
+   299                                         
+   300                                             new_wishlist_item = Wishlist(customer_id=current_user_id, good_id=good_id)
+   301                                             db.session.add(new_wishlist_item)
+   302                                             db.session.commit()
+   303                                             return jsonify({"message": "Item added to wishlist successfully"}), 201
+
+
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   306     50.5 MiB     50.5 MiB           1   @app.route('/wishlist/<int:wishlist_id>', methods=['DELETE'])
+   307                                         @jwt_required()
+   308                                         @profile_line
+   309                                         @profile
+   310                                         def remove_from_wishlist(wishlist_id):
+   311                                             """
+   312                                             Removes an item from the customer's wishlist.
+   313                                         
+   314                                             Args:
+   315                                                 wishlist_id (int): ID of the wishlist item to remove.
+   316                                         
+   317                                             Returns:
+   318                                                 Response: JSON response confirming removal or an error message if the item is not found.
+   319                                             """
+   320     50.5 MiB      0.0 MiB           1       current_user_id = get_jwt_identity()
+   321                                         
+   322     50.5 MiB      0.0 MiB           1       wishlist_item = Wishlist.query.filter_by(id=wishlist_id, customer_id=current_user_id).first()
+   323                                         
+   324     50.5 MiB      0.0 MiB           1       if not wishlist_item:
+   325     50.5 MiB      0.0 MiB           1           return jsonify({"error": "Item not found in wishlist"}), 404
+   326                                         
+   327                                             db.session.delete(wishlist_item)
+   328                                             db.session.commit()
+   329                                             return jsonify({"message": "Item removed from wishlist"}), 200
+
+
+Filename: app.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   332     50.6 MiB     50.6 MiB           1   @app.route('/wishlist', methods=['GET'])
+   333                                         @jwt_required()
+   334                                         @profile_line
+   335                                         @profile
+   336                                         def get_wishlist():
+   337                                             """
+   338                                             Retrieves all items in the customer's wishlist.
+   339                                         
+   340                                             Returns:
+   341                                                 Response: JSON response with a list of wishlist items, including product details.
+   342                                             """
+   343     50.6 MiB      0.0 MiB           1       current_user_id = get_jwt_identity()
+   344                                         
+   345     50.6 MiB      0.0 MiB           1       wishlist_items = Wishlist.query.filter_by(customer_id=current_user_id).all()
+   346     50.7 MiB      0.0 MiB           5       return jsonify([
+   347     50.7 MiB      0.0 MiB           2           {
+   348     50.7 MiB      0.0 MiB           2               "good_id": item.good_id,
+   349     50.7 MiB      0.1 MiB           2               "name": item.good.name,
+   350     50.7 MiB      0.0 MiB           2               "category": item.good.category,
+   351     50.7 MiB      0.0 MiB           2               "price": item.good.price_per_item,
+   352     50.7 MiB      0.0 MiB           2               "description": item.good.description
+   353     50.7 MiB      0.0 MiB           3           } for item in wishlist_items
+   354     50.7 MiB      0.0 MiB           1       ]), 200
+
+

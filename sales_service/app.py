@@ -23,7 +23,24 @@ Modules:
 - Bleach: Input sanitization to prevent XSS attacks.
 
 """
+from functools import wraps
+from line_profiler import LineProfiler
+from memory_profiler import profile
+profiler = LineProfiler()
 
+def profile_line(func):
+    # Check if the function has been wrapped and access the original if needed
+    unwrapped_func = getattr(func, "__wrapped__", func)
+    profiler.add_function(unwrapped_func)  # Add the unwrapped function to the profiler
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        with open("line_profiler_results.txt", "w") as f:
+            profiler.print_stats(stream=f)  # Write profiling stats to a file
+        return result
+
+    return wrapper
 from flask import Flask, request, jsonify
 from flask_jwt_extended import (
     JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
@@ -89,6 +106,8 @@ def sanitize_input(data):
 # Display available goods
 @app.route('/sales/goods', methods=['GET'])
 @jwt_required(optional=True)
+@profile_line
+@profile
 def display_available_goods():
     """
     Displays all goods with stock information.
@@ -107,6 +126,8 @@ def display_available_goods():
 # Get good details
 @app.route('/sales/goods/<int:good_id>', methods=['GET'])
 @jwt_required(optional=True)
+@profile_line
+@profile
 def get_good_details(good_id):
     """
     Retrieves detailed information about a specific good.
@@ -140,6 +161,8 @@ def get_good_details(good_id):
 # Make a sale (Authenticated users only)
 @app.route('/sales', methods=['POST'])
 @jwt_required()
+@profile_line
+@profile
 def make_sale():
     """
     Processes a sale for a customer.
@@ -192,6 +215,8 @@ def make_sale():
 # Get customer's purchase history (Authenticated users only)
 @app.route('/sales/history', methods=['GET'])
 @jwt_required()
+@profile_line
+@profile
 def get_purchase_history():
     """
     Retrieves purchase history for the authenticated customer.
@@ -218,6 +243,8 @@ def get_purchase_history():
 # Get all purchase histories (Admin only)
 @app.route('/sales/history/all', methods=['GET'])
 @jwt_required()
+@profile_line
+@profile
 def get_all_purchase_histories():
     """
     Retrieves all purchase histories.
@@ -246,6 +273,8 @@ def get_all_purchase_histories():
 # Add an item to the wishlist
 @app.route('/wishlist', methods=['POST'])
 @jwt_required()
+@profile_line
+@profile
 def add_to_wishlist():
     """
     Adds an item to the customer's wishlist.
@@ -276,6 +305,8 @@ def add_to_wishlist():
 # Remove an item from the wishlist
 @app.route('/wishlist/<int:wishlist_id>', methods=['DELETE'])
 @jwt_required()
+@profile_line
+@profile
 def remove_from_wishlist(wishlist_id):
     """
     Removes an item from the customer's wishlist.
@@ -300,6 +331,8 @@ def remove_from_wishlist(wishlist_id):
 # Get all wishlist items
 @app.route('/wishlist', methods=['GET'])
 @jwt_required()
+@profile_line
+@profile
 def get_wishlist():
     """
     Retrieves all items in the customer's wishlist.
@@ -323,6 +356,8 @@ def get_wishlist():
 # Check if an item is in the wishlist
 @app.route('/wishlist/<int:good_id>', methods=['GET'])
 @jwt_required()
+@profile_line
+@profile
 def is_in_wishlist(good_id):
     """
     Checks if a specific good is in the customer's wishlist.
@@ -345,6 +380,8 @@ def is_in_wishlist(good_id):
 # Get product recommendations
 @app.route('/sales/recommendations', methods=['GET'])
 @jwt_required()
+@profile_line
+@profile
 def get_recommendations():
     """
     Provides personalized product recommendations for the customer.
@@ -397,6 +434,8 @@ def get_recommendations_for_customer(customer_id):
 # Notifications
 @app.route('/notifications', methods=['GET'])
 @jwt_required()
+@profile_line
+@profile
 def get_notifications():
     """
     Retrieves all notifications for the authenticated customer.
