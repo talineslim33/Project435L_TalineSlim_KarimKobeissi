@@ -29,7 +29,7 @@ from flask_jwt_extended import (
     JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
 )
 from marshmallow import Schema, fields, ValidationError, validate
-from sales_service.models import db, Good, Inventory, Customer, Sale, Wishlist, Notification
+from models import db, Good, Inventory, Customer, Sale, Wishlist, Notification
 import bleach
 import sys
 import os
