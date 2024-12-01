@@ -1,56 +1,53 @@
-version: '3.8'
-
+version: "3.8"
 services:
+  # Customers Service
   customers_service:
     build:
       context: ./customers_service
     ports:
       - "5001:5001"
-    depends_on:
-      - db
     environment:
       - FLASK_ENV=production
+      - DATABASE_URL=postgresql://postgres:Talineslim0303$@host.docker.internal:5432/customers_service
+    networks:
+      - ecommerce_network
 
+  # Inventory Service
   inventory_service:
     build:
       context: ./inventory_service
     ports:
       - "5002:5002"
-    depends_on:
-      - db
     environment:
       - FLASK_ENV=production
+      - DATABASE_URL=postgresql://postgres:Talineslim0303$@host.docker.internal:5432/inventory_service
+    networks:
+      - ecommerce_network
 
-  reviews_service:
+  # Review Service
+  review_service:
     build:
-      context: ./reviews_service
+      context: ./review_service
     ports:
       - "5003:5003"
-    depends_on:
-      - db
     environment:
       - FLASK_ENV=production
+      - DATABASE_URL=postgresql://postgres:Talineslim0303$@host.docker.internal:5432/reviews_service
+    networks:
+      - ecommerce_network
 
+  # Sales Service
   sales_service:
     build:
       context: ./sales_service
     ports:
       - "5004:5004"
-    depends_on:
-      - db
     environment:
       - FLASK_ENV=production
+      - DATABASE_URL=postgresql://postgres:Talineslim0303$@host.docker.internal:5432/sales_service
+    networks:
+      - ecommerce_network
 
-  db:
-    image: postgres:13
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: ecommerce_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - db_data:/var/lib/postgresql/data
-
-volumes:
-  db_data:
+networks:
+  ecommerce_network:
+    driver: bridge

@@ -2,6 +2,8 @@ import unittest
 from app import app, db
 from flask import json
 
+
+
 class TestCustomerService(unittest.TestCase):
 
     def setUp(self):

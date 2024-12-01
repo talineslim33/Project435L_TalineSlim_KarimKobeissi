@@ -1,7 +1,7 @@
 Timer unit: 1e-07 s
 
 Total time: 0 s
-File: app.py
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\sales_service\app.py
 Function: display_available_goods at line 107
 
 Line #      Hits         Time  Per Hit   % Time  Line Contents
@@ -26,7 +26,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    124                                               ]), 200
 
 Total time: 0 s
-File: app.py
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\sales_service\app.py
 Function: get_good_details at line 127
 
 Line #      Hits         Time  Per Hit   % Time  Line Contents
@@ -66,7 +66,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    159                                               return jsonify(response_data), 200
 
 Total time: 0 s
-File: app.py
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\sales_service\app.py
 Function: make_sale at line 162
 
 Line #      Hits         Time  Per Hit   % Time  Line Contents
@@ -125,7 +125,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    213                                               }), 200
 
 Total time: 0 s
-File: app.py
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\sales_service\app.py
 Function: get_purchase_history at line 216
 
 Line #      Hits         Time  Per Hit   % Time  Line Contents
@@ -158,7 +158,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    241                                               ]), 200
 
 Total time: 0 s
-File: app.py
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\sales_service\app.py
 Function: get_all_purchase_histories at line 244
 
 Line #      Hits         Time  Per Hit   % Time  Line Contents
@@ -193,7 +193,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    271                                               ]), 200
 
 Total time: 0 s
-File: app.py
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\sales_service\app.py
 Function: add_to_wishlist at line 274
 
 Line #      Hits         Time  Per Hit   % Time  Line Contents
@@ -230,7 +230,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    303                                               return jsonify({"message": "Item added to wishlist successfully"}), 201
 
 Total time: 0 s
-File: app.py
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\sales_service\app.py
 Function: remove_from_wishlist at line 306
 
 Line #      Hits         Time  Per Hit   % Time  Line Contents
@@ -261,7 +261,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    329                                               return jsonify({"message": "Item removed from wishlist"}), 200
 
 Total time: 0 s
-File: app.py
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\sales_service\app.py
 Function: get_wishlist at line 332
 
 Line #      Hits         Time  Per Hit   % Time  Line Contents
@@ -291,7 +291,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    354                                               ]), 200
 
 Total time: 0 s
-File: app.py
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\sales_service\app.py
 Function: is_in_wishlist at line 357
 
 Line #      Hits         Time  Per Hit   % Time  Line Contents
@@ -320,7 +320,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    378                                                   return jsonify({"in_wishlist": False}), 404
 
 Total time: 0 s
-File: app.py
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\sales_service\app.py
 Function: get_recommendations at line 381
 
 Line #      Hits         Time  Per Hit   % Time  Line Contents
@@ -342,7 +342,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    395                                               return jsonify(recommendations), 200
 
 Total time: 0 s
-File: app.py
+File: C:\Users\User\Desktop\Taline files\AUB\Y4 Fall 24-25\EECE 435L\Project\Project435L_TalineSlim_KarimKobeissi\sales_service\app.py
 Function: get_notifications at line 435
 
 Line #      Hits         Time  Per Hit   % Time  Line Contents

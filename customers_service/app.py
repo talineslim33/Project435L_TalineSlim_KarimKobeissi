@@ -39,20 +39,17 @@ import sys
 import os
 import cProfile
 import pstats
-# Add the parent directory to sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from config import Config
+from models import db, Customer  # Ensure 'Customer' model includes 'is_admin' field
 
-import config
-from customers_service.models import db, Customer  # Ensure 'Customer' model includes 'is_admin' field
+
 
 app = Flask(__name__)
 
-app.config['JWT_SECRET_KEY'] = config.JWT_SECRET_KEY
-app.config['JWT_ALGORITHM'] = config.JWT_ALGORITHM
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-    'DATABASE_URI', 'postgresql://postgres:Talineslim0303$@localhost/customers_service'
-)
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['JWT_SECRET_KEY'] = Config.JWT_SECRET_KEY
+app.config['JWT_ALGORITHM'] = Config.JWT_ALGORITHM
+app.config['SQLALCHEMY_DATABASE_URI'] = Config.DATABASE_URL
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = Config.SQLALCHEMY_TRACK_MODIFICATIONS
 
 # Initialize Extensions
 db.init_app(app)
@@ -500,17 +497,23 @@ def deduct_wallet(customer_id):
 
 import cProfile
 import pstats
+if __name__ == "__main__":
+    enable_profiler = os.getenv("ENABLE_PROFILER", "False").lower() == "true"
+    profiler = None
 
-if __name__ == '__main__':
-    # Create a profiler instance
-    profiler = cProfile.Profile()
-    profiler.enable()  # Start profiling
+    if enable_profiler:
+        # Create a profiler instance
+        profiler = cProfile.Profile()
+        profiler.enable()  # Start profiling
 
-    # Run the Flask app
+    # Initialize database tables if needed
     with app.app_context():
         db.create_all()
-    app.run(debug=False, port=5001)
 
-    profiler.disable()  # Stop profiling
-    # Save profiling stats to a file
-    profiler.dump_stats('customers_service.prof')
+    # Run the Flask app
+    app.run(debug=False, port=int(os.getenv("PORT", 5001)))
+
+    if profiler:
+        profiler.disable()  # Stop profiling
+        # Save profiling stats to a file
+        profiler.dump_stats("customers_service.prof")

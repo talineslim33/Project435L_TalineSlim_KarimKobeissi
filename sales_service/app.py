@@ -53,18 +53,16 @@ import os
 from collections import Counter
 from datetime import datetime, timedelta
 
-# Add parent directory to sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import config  # Import config after adding parent directory
+from config import Config  # Import config after adding parent directory
 
 app = Flask(__name__)
 
 # Configurations
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Talineslim0303$@localhost/sales_service'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = config.JWT_SECRET_KEY
-app.config['JWT_ALGORITHM'] = config.JWT_ALGORITHM
+app.config['SQLALCHEMY_DATABASE_URI'] = Config.DATABASE_URL
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = Config.SQLALCHEMY_TRACK_MODIFICATIONS
+app.config['JWT_SECRET_KEY'] = Config.JWT_SECRET_KEY
+app.config['JWT_ALGORITHM'] = Config.JWT_ALGORITHM
 
 db.init_app(app)
 jwt = JWTManager(app)
@@ -494,4 +492,4 @@ if __name__ == '__main__':
     """
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5004)

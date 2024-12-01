@@ -31,17 +31,17 @@ from marshmallow import Schema, fields, ValidationError, validate
 import sys
 import os
 
-# Add parent directory to sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import config  # Import config after adding parent directory
+from config import Config  # Import config after adding parent directory
 
 app = Flask(__name__)
 
 # Configurations
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Talineslim0303$@localhost/reviews_service'
-app.config['JWT_SECRET_KEY'] = config.JWT_SECRET_KEY
-app.config['JWT_ALGORITHM'] = config.JWT_ALGORITHM
+app.config['JWT_SECRET_KEY'] = Config.JWT_SECRET_KEY
+app.config['JWT_ALGORITHM'] = Config.JWT_ALGORITHM
+app.config['SQLALCHEMY_DATABASE_URI'] = Config.DATABASE_URL
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = Config.SQLALCHEMY_TRACK_MODIFICATIONS
 
 db.init_app(app)
 jwt = JWTManager(app)
@@ -379,7 +379,7 @@ if __name__ == '__main__':
         db.create_all()
     profiler = cProfile.Profile()
     profiler.enable()
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5003)
     profiler.disable()
     stats = pstats.Stats(profiler)
     stats.strip_dirs()
